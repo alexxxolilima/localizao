@@ -21,6 +21,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let rendered = 0;
   const PER_PAGE = 50;
 
+  const INCLUDE_ALL_BY_DEFAULT = true;
+
+  const BLOCKED_SUBJECT_RE = /\b(retirada|reagend|tentativa|^re$)\b/i;
+
   const log = (...a) => console.log('[Athon]', ...a);
   function setStatus(txt, type='info') { if (fileStatus) fileStatus.innerHTML = `<span style="color:${type==='error'?'var(--danger)':'var(--muted)'}">${txt}</span>`; log(txt); }
   function showProgress(p=0) { if (!progressRow || !progressBar) return; progressRow.classList.toggle('hidden', p <= 0 || p >= 1); progressBar.style.width = Math.round(p*100) + '%'; }
@@ -70,6 +74,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const order=[',',';','\t']; order.sort((a,b)=>counts[b]-counts[a]||order.indexOf(a)-order.indexOf(b)); return order[0];
   }
 
+  function subjectAllowed(assuntoRaw) {
+    if (!assuntoRaw) return false;
+    if (BLOCKED_SUBJECT_RE.test(assuntoRaw)) return false;
+    if (INCLUDE_ALL_BY_DEFAULT) return true;
+    return true;
+  }
+
   function parseCSVText(csvText, delimiter=',', onProgress=()=>{}) {
     const lines = csvText.replace(/\r\n/g,'\n').split('\n').filter(l => l.trim().length > 0);
     if (lines.length === 0) return [];
@@ -106,9 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
           if (cols.length > fallbackOrder.length) { it.bairro = cols[cols.length - 1].trim(); it.endereco = cols.slice(5, cols.length - 1).join(', ').trim(); }
         }
         for (const k in it) if (typeof it[k] === 'string') it[k] = it[k].replace(/^\uFEFF/, '').replace(/\u00A0/g,' ').trim();
-        const a = (it.assunto || '').toLowerCase();
-        if (/\b(retirada|reagend|tentativa|^re$)\b/i.test(a)) continue;
-        if (!/(visita[\s\-_\/]*t[eé]cnica|(^|\b)vt(\b|$)|instala(cao|cao|ção|acao|ação))/i.test(a)) continue;
+        const assuntoRaw = (it.assunto || '').toString();
+        if (!subjectAllowed(assuntoRaw)) continue;
         out.push(it);
         if (li % 100 === 0) onProgress(Math.min(li / total, 1));
       }
@@ -125,9 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
           if (hasHeader) { for (const k in idx) if (idx[k] >= 0 && idx[k] < cols.length) it[k] = cols[idx[k]].trim(); if (cols.length > header.length && idx.endereco >= 0) { const start = idx.endereco; const last = cols.length - 1; const joinEnd = Math.max(start, last - 1); if (joinEnd > start) it.endereco = cols.slice(start, joinEnd + 1).join(', ').trim(); } }
           else { for (let i=0;i<fallbackOrder.length && i<cols.length;i++) it[fallbackOrder[i]] = (cols[i]||'').trim(); if (cols.length > fallbackOrder.length) { it.bairro = cols[cols.length - 1].trim(); it.endereco = cols.slice(5, cols.length - 1).join(', ').trim(); } }
           for (const k in it) if (typeof it[k] === 'string') it[k] = it[k].replace(/^\uFEFF/, '').replace(/\u00A0/g,' ').trim();
-          const a = (it.assunto || '').toLowerCase();
-          if (/\b(retirada|reagend|tentativa|^re$)\b/i.test(a)) continue;
-          if (!/(visita[\s\-_\/]*t[eé]cnica|(^|\b)vt(\b|$)|instala(cao|cao|ção|acao|ação))/i.test(a)) continue;
+          const assuntoRaw = (it.assunto || '').toString();
+          if (!subjectAllowed(assuntoRaw)) continue;
           out.push(it);
         }
         showProgress(Math.min(li / total, 1));
@@ -137,7 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // sheetjs loader + mapRows
   function loadSheetJs(){
     return new Promise((res, rej) => {
       if (window.XLSX) return res(window.XLSX);
@@ -168,9 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i=0;i<vals.length && i<order.length;i++) it[order[i]] = vals[i] || '';
       }
       for (const k in it) if (typeof it[k] === 'string') it[k] = it[k].replace(/^\uFEFF/, '').replace(/\u00A0/g,' ').trim();
-      const a = (it.assunto || '').toLowerCase();
-      if (/\b(retirada|reagend|tentativa|^re$)\b/i.test(a)) continue;
-      if (!/(visita[\s\-_\/]*t[eé]cnica|(^|\b)vt(\b|$)|instala(cao|cao|ção|acao|ação))/i.test(a)) continue;
+      const assuntoRaw = (it.assunto || '').toString();
+      if (!subjectAllowed(assuntoRaw)) continue;
       out.push(it);
     }
     return out;
@@ -287,28 +294,16 @@ document.addEventListener('DOMContentLoaded', () => {
   function openExpandedClone(card) {
     if (!card) return;
     closeExistingClone();
-
     const clone = card.cloneNode(true);
     clone.classList.add('result--expanded');
-
-    const inner = document.createElement('div');
-    inner.className = 'expanded-content';
-    inner.style.position = 'relative';
-    inner.style.paddingRight = '8px';
+    const inner = document.createElement('div'); inner.className = 'expanded-content'; inner.style.position = 'relative'; inner.style.paddingRight = '8px';
     while (clone.firstChild) inner.appendChild(clone.firstChild);
     clone.appendChild(inner);
-
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'expanded-close';
-    closeBtn.textContent = 'Fechar ✕';
-    closeBtn.setAttribute('aria-label','Fechar detalhe');
+    const closeBtn = document.createElement('button'); closeBtn.className = 'expanded-close'; closeBtn.textContent = 'Fechar ✕'; closeBtn.setAttribute('aria-label','Fechar detalhe');
     clone.appendChild(closeBtn);
-
     document.body.appendChild(clone);
     if (dim) dim.classList.remove('hidden');
-
     card.style.visibility = 'hidden';
-
     clone.querySelectorAll('.copy-btn').forEach(btn => {
       btn.addEventListener('click', async (ev) => {
         ev.stopPropagation();
@@ -321,7 +316,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(err) { console.error(err); setStatus('Erro ao copiar', 'error'); }
       });
     });
-
     const removeClone = () => {
       clone.remove();
       if (dim) dim.classList.add('hidden');
@@ -341,9 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dim) dim.classList.add('hidden');
     document.querySelectorAll('.result[style*="visibility: hidden"]').forEach(el => el.style.visibility = '');
   }
-
-  if (closeModal) closeModal.addEventListener('click', ()=> overlay && overlay.classList.add('hidden'));
-  if (overlay) overlay.addEventListener('click', (e)=> { if (e.target === overlay) overlay.classList.add('hidden'); });
 
   if (loadBtn) {
     loadBtn.addEventListener('click', async () => {
@@ -399,5 +390,6 @@ document.addEventListener('DOMContentLoaded', () => {
   updateFileDisplay(null);
   window._athon = { itemsRef: ()=> items };
 
-  log('log.js updated (layout fixes) — ready');
+  log('log.js updated (INCLUDE ALL by default) — ready');
 });
+
