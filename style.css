@@ -99,7 +99,7 @@ header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
   display:flex;
   gap:8px;
   align-items:center;
-  flex-wrap:wrap; 
+  flex-wrap:wrap;
 }
 
 .copy-feedback {
@@ -161,3 +161,5 @@ header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
 }
 
 .result:focus{outline:3px solid rgba(56,189,248,0.12);outline-offset:6px}
+
+
