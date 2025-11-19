@@ -1,14 +1,19 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="utf-8" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Dashboard Inicial" />
+  <meta name="author" content="Alex Lima, Gustavo Matos , Bianca Marques" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="shortcut icon" href="OIP.jpg" type="image/png">
   <title>Athon Localizador</title>
 
   <link rel="stylesheet" href="style.css">
-  <link rel="shortcut icon" href="OIP.jpg" type="image/png">
-
 </head>
+
 <body class="dark-mode">
   <main class="app">
     <header>
@@ -21,17 +26,23 @@
     <section class="card">
       <label id="dropZone" class="dropzone" title="Clique ou arraste um arquivo aqui">
         <input id="fileInput" type="file" accept=".csv,.xls,.xlsx,text/csv,text/tab-separated-values,text/plain">
-        <div class="drop-info">
-          <div class="text-sm">Selecionar arquivo</div>
+
+        <div style="flex-grow: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <div class="drop-info">
+            <div class="text-sm">Clique para selecionar ou arraste o arquivo aqui</div>
+          </div>
+
+          <div class="controls" style="display:flex; gap:10px; align-items:center;">
+            <button id="loadBtn" class="btn btn-primary" disabled>CARREGAR</button>
+          </div>
         </div>
 
-        <div class="controls" style="margin-left:auto; display:flex; gap:10px; align-items:center;">
-          <button id="loadBtn" class="btn btn-primary" disabled>CARREGAR</button>
-        </div>
       </label>
 
       <div id="progressRow" class="mt-4 hidden">
-        <div class="progress-track"><div id="progressBar" class="progress-bar" style="width:0%"></div></div>
+        <div class="progress-track">
+          <div id="progressBar" class="progress-bar" style="width:0%"></div>
+        </div>
         <div id="loadingText" class="muted text-sm mt-2">Processando...</div>
       </div>
     </section>
@@ -61,6 +72,6 @@
 
   <script src="log.js" defer></script>
 </body>
-</html>
 
+</html>
 
