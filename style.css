@@ -462,9 +462,17 @@ input:checked+.slider-round:before {
 }
 
 @keyframes microBounce {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.02);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 .micro-bounce {
@@ -512,6 +520,7 @@ input:checked+.slider-round:before {
   color: var(--danger-color);
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
+
 
 
 
