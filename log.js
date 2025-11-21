@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const PER_PAGE = 50;
   const BLOCKED_SUBJECT_RE = /\b(retirada|reagend|tentativa|^re$)\b/i;
 
+  function setStatus(txt) {
+    if (fileStatus) fileStatus.textContent = txt;
+  }
+
   function showProgress(p = 0) {
     if (!progressRow || !progressBar) return;
     const v = Math.max(0, Math.min(1, p));
@@ -45,11 +49,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateFileDisplay(file) {
     if (!file) {
       fileDisplayName.textContent = 'Escolha o arquivo ';
+      fileStatus.textContent = '';
       loadBtn.disabled = true;
       return;
     }
     const sizeKB = Math.round(file.size / 1024);
-    fileDisplayName.textContent = `${file.name} — ${sizeKB} KB`;
+    fileDisplayName.textContent = `${file.name}`;
+    fileStatus.textContent = '';
     loadBtn.disabled = false;
   }
 
@@ -376,7 +382,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  loadBtn.addEventListener('click', async () => {
+  loadBtn.addEventListener('click', async (e) => {
+    e.preventDefault(); 
+    e.stopPropagation(); 
+
     if (!selectedFile) return;
     loadBtn.disabled = true;
     loadBtn.textContent = 'Processando...';
