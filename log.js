@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     search: `<svg class="icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>`,
     boat: `<svg class="icon" viewBox="0 0 24 24"><path d="M20 21c-1.39 0-2.78-.47-4-1.32-2.44 1.71-5.56 1.71-8 0C6.78 20.53 5.39 21 4 21H2v2h2c1.38 0 2.74-.35 4-.99 2.52 1.29 5.48 1.29 8 0 1.26.65 2.62.99 4 .99h2v-2h-2zM3.95 19H4c1.6 0 3.02-.88 4-2 .98 1.12 2.4 2 4 2s3.02-.88 4-2c.98 1.12 2.4 2 4 2h.05l.02-1.91C20.03 17.04 20.01 17 20 17c-1.66 0-3-1.34-3-3 0-2 3-5.4 3-5.4V7h-6V6h-4v1H4v1.6s3 3.4 3 5.4c0 1.66-1.34 3-3 3 0 0-.03.04-.07.09L3.95 19z"/></svg>`,
     warning: `<svg class="icon" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>`,
-    bing: `<svg class="icon" viewBox="0 0 24 24"><path d="M3 6l14-4 4 2-6 16L3 20V6z"/></svg>`
+    bing: `<svg class="icon" viewBox="0 0 24 24"><path d="M17.49 3 6.55 7.15l-1.39 9.38 9.32 5.47 1.23-1.28v-3.48l4.79-2.73V3.03l-3.01-.03zm-7.65 6.09 3.25 1.73-3.25 8.35v-6.95l-2.02-1.09V8.65l2.02-1.22V5.79l6.38-2.32v10.63l-6.38 3.66v-2.04l2.88-1.57V9.09z"/></svg>`
   };
 
   const fileInput = document.getElementById('fileInput');
@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const PER_PAGE = 50;
   const BLOCKED_SUBJECT_RE = /\b(retirada|reagend|tentativa|^re$)\b/i;
 
+
   function setStatus(txt) {
     if (fileStatus) fileStatus.textContent = txt;
   }
@@ -48,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateFileDisplay(file) {
     if (!file) {
-      fileDisplayName.textContent = 'Escolha o arquivo ';
+      fileDisplayName.textContent = 'Escolha o arquivo';
       fileStatus.textContent = '';
       loadBtn.disabled = true;
       return;
@@ -199,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const text = (it.endereco + ' ' + it.bairro + ' ' + it.referencia).toLowerCase();
     const keywords = [
       'balsa', 'riacho grande', 'tatetos', 'taquacetuba', 'pos balsa', 
-      'pós balsa', 'curucutu', 'capivari', 'finco', 'santa cruz', 'estrada do rio acima'
+      'pós balsa', 'curucutu', 'capivari', 'santa cruz', 'estrada do rio acima'
     ];
     return keywords.some(k => text.includes(k));
   }
@@ -313,11 +314,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadMap = (provider) => {
       btns.forEach(b => b.classList.toggle('active', b.dataset.provider === provider));
       let src = '';
+      
       if (provider === 'google') {
         const type = isBalsa ? 'k' : 'm'; 
         src = `https://maps.google.com/maps?q=${q}&t=${type}&z=16&ie=UTF8&iwloc=&output=embed`;
       } else if (provider === 'bing') {
-        src = `https://www.bing.com/maps/embed?h=350&w=500&cp=&lvl=16&typ=d&sty=r&src=SHELL&FORM=MBEDV8&q=${q}`;
+        src = `https://www.bing.com/maps/embed?h=350&w=500&lvl=16&typ=d&sty=r&src=SHELL&FORM=MBEDV8&q=${q}&mkt=pt-BR`;
       }
       
       if (provider === 'waze') return; 
@@ -356,6 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.style.overflow = '';
   }
 
+
   const handleFileSelect = (file) => {
     if (!file) return;
     selectedFile = file;
@@ -383,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   loadBtn.addEventListener('click', async (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
     e.stopPropagation(); 
 
     if (!selectedFile) return;
