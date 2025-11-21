@@ -34,10 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const PER_PAGE = 50;
   const BLOCKED_SUBJECT_RE = /\b(retirada|reagend|tentativa|^re$)\b/i;
 
-  function setStatus(txt) {
-    if (fileStatus) fileStatus.textContent = txt;
-  }
-
   function showProgress(p = 0) {
     if (!progressRow || !progressBar) return;
     const v = Math.max(0, Math.min(1, p));
@@ -48,14 +44,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateFileDisplay(file) {
     if (!file) {
-      fileDisplayName.textContent = 'Clique ou arraste o arquivo (CSV/Excel)';
-      fileStatus.textContent = 'Aguardando arquivo...';
+      fileDisplayName.textContent = 'Escolha o arquivo ';
       loadBtn.disabled = true;
       return;
     }
     const sizeKB = Math.round(file.size / 1024);
     fileDisplayName.textContent = `${file.name} — ${sizeKB} KB`;
-    fileStatus.textContent = 'Arquivo pronto para carregar';
     loadBtn.disabled = false;
   }
 
@@ -459,4 +453,5 @@ document.addEventListener('DOMContentLoaded', () => {
   
   updateFileDisplay(null);
 });
+
 
