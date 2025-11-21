@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 
+
 <body class="dark-mode">
   <main class="app container" id="appRoot" role="main">
     
@@ -43,6 +44,7 @@
         <div class="drop-content">
           <div class="drop-info">
             <div id="fileDisplayName" class="text-main-bold">Escolha o arquivo </div>
+            <div id="fileStatus" class="small-muted"></div>
           </div>
           
           <div class="controls">
@@ -85,6 +87,7 @@
 
   <template id="cardTemplate">
     <div class="result card result-card" tabindex="0" role="button">
+      <div class="card-badges"></div>
       <div class="card-header">
         <div class="card-title">
           <h3 class="card-client">—</h3>
@@ -139,9 +142,9 @@
       </div>
     </div>
   </template>
+
   <script src="log.js" defer></script>
 </body>
-
 </html>
 
 
