@@ -15,63 +15,135 @@
 </head>
 
 <body class="dark-mode">
-  <main class="app">
-    <header>
-      <img id="companyLogo" class="company-logo" src="OIP.jpg" alt="Logo">
-      <div>
-        <h1 class="app-title">Athon <span class="brand">Localizador</span></h1>
+  <main class="app container" id="appRoot" role="main">
+    
+    <header class="header header-content" role="banner">
+      <div class="header-branding">
+        <img id="companyLogo" class="company-logo" src="OIP.jpg" alt="Logo Athon">
+        <div class="brand-text">
+          <div class="brand">Athon Localizador</div>
+          <div class="small-muted">Gestão de O.S. e Rotas</div>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <label class="switch-theme" title="Alternar tema Claro/Escuro" for="toggleTheme">
+          <input id="toggleTheme" type="checkbox" aria-label="Alternar tema">
+          <span class="slider-round">
+            <span class="icon-sun">☀</span>
+            <span class="icon-moon">☾</span>
+          </span>
+        </label>
       </div>
     </header>
 
-    <section class="card">
+    <section class="card form-card" aria-label="Upload de Arquivos">
       <label id="dropZone" class="dropzone" title="Clique ou arraste um arquivo aqui">
-        <input id="fileInput" type="file" accept=".csv,.xls,.xlsx,text/csv,text/tab-separated-values,text/plain">
-
-        <div style="flex-grow: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+        <input id="fileInput" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        
+        <div class="drop-content">
           <div class="drop-info">
-            <div class="text-sm">Clique para selecionar ou arraste o arquivo aqui</div>
+            <div id="fileDisplayName" class="text-main-bold">Clique ou arraste o arquivo (CSV/Excel)</div>
+            <div id="fileStatus" class="small-muted">Aguardando arquivo...</div>
           </div>
-
-          <div class="controls" style="display:flex; gap:10px; align-items:center;">
+          
+          <div class="controls">
             <button id="loadBtn" class="btn btn-primary" disabled>CARREGAR</button>
           </div>
         </div>
-
       </label>
 
-      <div id="progressRow" class="mt-4 hidden">
+      <div id="progressRow" class="mt-4 hidden" aria-hidden="true">
         <div class="progress-track">
           <div id="progressBar" class="progress-bar" style="width:0%"></div>
         </div>
-        <div id="loadingText" class="muted text-sm mt-2">Processando...</div>
+        <div id="loadingText" class="muted text-sm mt-2">Processando dados...</div>
       </div>
     </section>
 
-    <div class="mt-6">
-      <input id="filter" class="input" placeholder="Filtrar por cliente, endereço, filial..." />
+    <div class="mt-6 form-card search-container">
+      <input id="filter" class="input" placeholder="Filtrar por cliente, endereço, OS..." aria-label="Filtrar resultados">
     </div>
 
-    <div id="results" class="grid mt-6" aria-live="polite"></div>
+    <section id="results" class="grid mt-6" aria-live="polite" aria-label="Resultados"></section>
 
     <div class="mt-6 text-center">
       <button id="moreBtn" class="btn btn-ghost hidden">Carregar mais</button>
     </div>
+
   </main>
 
   <div id="dim" class="overlay-dim hidden" aria-hidden="true"></div>
 
   <div id="overlay" class="overlay hidden" aria-hidden="true">
-    <div class="modal card" role="dialog" aria-modal="true">
+    <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal-head">
-        <div>Detalhes</div>
-        <button id="closeModal" class="close-btn">Fechar</button>
+        <div id="modalTitle">Detalhes da O.S.</div>
+        <button id="closeModal" class="close-btn" aria-label="Fechar">✕</button>
       </div>
       <div id="modalBody" class="modal-body"></div>
     </div>
   </div>
 
+  <template id="cardTemplate">
+    <div class="result card result-card" tabindex="0" role="button">
+      <div class="card-header">
+        <div class="card-title">
+          <h3 class="card-client">—</h3>
+          <div class="sub"><strong>Assunto:</strong> <span class="card-subject">—</span></div>
+        </div>
+        <div class="card-meta">
+          <div class="chip card-branch">—</div>
+          <div class="muted text-sm card-city">—</div>
+        </div>
+      </div>
+      <div class="address-row"><strong>End:</strong> <span class="card-address">—</span></div>
+      
+      <div class="actions">
+        <a class="btn btn-primary open-maps" href="#" target="_blank" rel="noopener noreferrer">Maps</a>
+        <a class="btn btn-ghost open-bing" href="#" target="_blank" rel="noopener noreferrer">Bing</a>
+        <button class="btn btn-ghost copy-btn">Copiar</button>
+        <button class="btn btn-ghost details-btn">Detalhes</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="modalTemplate">
+    <div class="modal-content-wrapper">
+      <div class="result-header modal-client">—</div>
+      
+      <div class="detail-grid">
+        <div class="detail-item"><span class="detail-label">Filial</span><div class="modal-branch">—</div></div>
+        <div class="detail-item"><span class="detail-label">Setor</span><div class="modal-setor">—</div></div>
+        <div class="detail-item full-width"><span class="detail-label">Assunto</span><div class="modal-subject">—</div></div>
+        
+        <div class="detail-item full-width">
+          <span class="detail-label">Endereço Completo</span>
+          <div class="modal-address">—</div>
+          <span class="modal-precision-badge"></span>
+        </div>
+
+        <div class="detail-item"><span class="detail-label">Complemento</span><div class="modal-complement">—</div></div>
+        <div class="detail-item"><span class="detail-label">Condomínio</span><div class="modal-condo">—</div></div>
+        <div class="detail-item"><span class="detail-label">Bloco/Apt</span><div class="modal-blockapt">—</div></div>
+        <div class="detail-item"><span class="detail-label">Bairro</span><div class="modal-district">—</div></div>
+      </div>
+
+      <div class="provider-toolbar">
+        <button class="provider-btn active" data-provider="google">Google Maps</button>
+        <button class="provider-btn" data-provider="bing">Bing Maps</button>
+        <button class="provider-btn" data-provider="waze" data-open-external="true">Abrir Waze</button>
+        <button class="copy-link btn-ghost-sm">Copiar Link</button>
+      </div>
+      
+      <div id="mapContainer">
+        <div class="map-placeholder">Carregando mapa...</div>
+      </div>
+    </div>
+  </template>
   <script src="log.js" defer></script>
 </body>
 
 </html>
+
 
