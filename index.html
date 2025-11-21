@@ -1,151 +1,152 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 
 <head>
-  <meta charset="utf-8" />
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Dashboard Inicial" />
-  <meta name="author" content="Alex Lima, Gustavo Matos , Bianca Marques" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="shortcut icon" href="OIP.jpg" type="image/png">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Athon Localizador">
+  <meta name="author" content="Alex Lima, Gustavo Matos, Bianca Marques">
   <title>Athon Localizador</title>
-
   <link rel="stylesheet" href="style.css">
+  <link rel="shortcut icon" href="OIP.jpg" type="image/png">
 </head>
 
-
 <body class="dark-mode">
-  <main class="app container" id="appRoot" role="main">
-    
-    <header class="header header-content" role="banner">
+  <main class="app container" id="appRoot">
+    <header class="header">
       <div class="header-branding">
-        <img id="companyLogo" class="company-logo" src="OIP.jpg" alt="Logo Athon">
+        <img id="companyLogo" class="company-logo" src="OIP.jpg" alt="Logo">
         <div class="brand-text">
           <div class="brand">Athon Localizador</div>
         </div>
       </div>
-      
       <div class="header-actions">
-        <label class="switch-theme" title="Alternar tema Claro/Escuro" for="toggleTheme">
-          <input id="toggleTheme" type="checkbox" aria-label="Alternar tema">
-          <span class="slider-round">
-            <span class="icon-sun">☀</span>
-            <span class="icon-moon">☾</span>
-          </span>
-        </label>
+        <button id="themeBtn" class="theme-btn" title="Alternar Tema">
+          <svg class="icon-theme" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+        </button>
       </div>
     </header>
 
-    <section class="card form-card" aria-label="Upload de Arquivos">
-      <label id="dropZone" class="dropzone" title="Clique ou arraste um arquivo aqui">
+    <section class="card form-card" id="uploadSection">
+      <label id="dropZone" class="dropzone">
         <input id="fileInput" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-        
         <div class="drop-content">
           <div class="drop-info">
             <div id="fileDisplayName" class="text-main-bold">Escolha o arquivo </div>
-            <div id="fileStatus" class="small-muted"></div>
           </div>
-          
-          <div class="controls">
-            <button id="loadBtn" class="btn btn-primary" disabled>CARREGAR</button>
-          </div>
+          <button id="loadBtn" class="btn btn-primary" disabled>CARREGAR</button>
         </div>
       </label>
-
-      <div id="progressRow" class="mt-4 hidden" aria-hidden="true">
+      <div id="progressRow" class="mt-4 hidden">
         <div class="progress-track">
           <div id="progressBar" class="progress-bar" style="width:0%"></div>
         </div>
-        <div id="loadingText" class="muted text-sm mt-2">Processando dados...</div>
       </div>
     </section>
 
-    <div class="mt-6 form-card search-container">
-      <input id="filter" class="input" placeholder="Filtrar por cliente, endereço, OS..." aria-label="Filtrar resultados">
+    <div class="control-panel mt-6">
+      <div class="search-row card">
+        <div class="input-group flex-grow">
+          <input id="filter" class="input-clean" placeholder="Pesquisar...">
+        </div>
+        <div class="input-group" style="min-width: 200px;">
+          <select id="techFilter" class="input-clean">
+            <option value="">Todos os Técnicos</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="actions-row">
+        <div class="quick-filters">
+          <button class="filter-chip active" data-filter="all">Todas</button>
+          <button class="filter-chip" data-filter="balsa">⚠️ Balsa</button>
+          <button class="filter-chip" data-filter="noaddr">🟧 Sem Endereço</button>
+        </div>
+        <div class="tools-group">
+          <button id="copyLinkListBtn" class="btn btn-ghost">Copiar Links</button>
+          <button id="openRouteBtn" class="btn btn-ghost">Ver Rota (Maps)</button>
+          <button id="exportBtn" class="btn btn-ghost">Excel</button>
+        </div>
+      </div>
     </div>
 
-    <section id="results" class="grid mt-6" aria-live="polite" aria-label="Resultados"></section>
+    <section id="results" class="grid mt-6"></section>
 
     <div class="mt-6 text-center">
       <button id="moreBtn" class="btn btn-ghost hidden">Carregar mais</button>
     </div>
-
   </main>
 
-  <div id="dim" class="overlay-dim hidden" aria-hidden="true"></div>
-
-  <div id="overlay" class="overlay hidden" aria-hidden="true">
-    <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div id="dim" class="overlay-dim hidden"></div>
+  <div id="overlay" class="overlay hidden">
+    <div class="modal card">
       <div class="modal-head">
-        <div id="modalTitle">Detalhes da O.S.</div>
-        <button id="closeModal" class="close-btn" aria-label="Fechar">✕</button>
+        <div id="modalTitle">Detalhes</div>
+        <button id="closeModal" class="close-btn">✕</button>
       </div>
       <div id="modalBody" class="modal-body"></div>
     </div>
   </div>
 
   <template id="cardTemplate">
-    <div class="result card result-card" tabindex="0" role="button">
+    <div class="result-card card" tabindex="0">
       <div class="card-badges"></div>
       <div class="card-header">
         <div class="card-title">
-          <h3 class="card-client">—</h3>
-          <div class="sub"><strong>Assunto:</strong> <span class="card-subject">—</span></div>
+          <h3 class="card-client">Nome</h3>
+          <div class="sub"><span class="card-subject">Assunto</span></div>
         </div>
         <div class="card-meta">
-          <div class="chip card-branch">—</div>
-          <div class="muted text-sm card-city">—</div>
+          <span class="chip card-branch">Filial</span>
+          <div class="tech-display">👤 <span class="card-tech">Tecnico</span></div>
         </div>
       </div>
-      <div class="address-row"><strong>End:</strong> <span class="card-address">—</span></div>
-      
-      <div class="actions">
-        <a class="btn btn-primary open-maps" href="#" target="_blank" rel="noopener noreferrer">Maps</a>
-        <a class="btn btn-ghost open-bing" href="#" target="_blank" rel="noopener noreferrer">Bing</a>
-        <button class="btn btn-ghost copy-btn">Copiar</button>
-        <button class="btn btn-ghost details-btn">Detalhes</button>
+      <div class="address-box">
+        <span class="card-address">Endereço...</span>
+      </div>
+      <div class="card-actions">
+        <a class="btn-action btn-maps open-maps" target="_blank" title="Google Maps">Maps</a>
+        <a class="btn-action btn-whatsapp open-zap" target="_blank" title="WhatsApp">Zap</a>
+        <button class="btn-action btn-creds copy-creds" title="Copiar Login">
+           <svg style="width:16px; height:16px; fill:currentColor" viewBox="0 0 24 24"><path d="M21 10h-8.35A5.99 5.99 0 0 0 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6a5.99 5.99 0 0 0 5.65-4H17v4h4v-4h2v-4zM7 15c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/></svg>
+        </button>
+        <button class="btn-action btn-copy copy-btn" title="Copiar Link">Link</button>
+        <button class="btn-action btn-details details-btn">Ver</button>
       </div>
     </div>
   </template>
 
   <template id="modalTemplate">
     <div class="modal-content-wrapper">
-      <div class="result-header modal-client">—</div>
-      
+      <div class="result-header modal-client">-</div>
       <div class="detail-grid">
-        <div class="detail-item"><span class="detail-label">Filial</span><div class="modal-branch">—</div></div>
-        <div class="detail-item"><span class="detail-label">Setor</span><div class="modal-setor">—</div></div>
-        <div class="detail-item full-width"><span class="detail-label">Assunto</span><div class="modal-subject">—</div></div>
+        <div class="detail-item"><span class="detail-label">Filial</span><div class="modal-branch">-</div></div>
+        <div class="detail-item"><span class="detail-label">Técnico</span><div class="modal-tech">-</div></div>
+        <div class="detail-item"><span class="detail-label">Login</span><div class="modal-login highlight-text">-</div></div>
+        <div class="detail-item"><span class="detail-label">Telefone</span><div class="modal-phone">-</div></div>
         
-        <div class="detail-item full-width">
-          <span class="detail-label">Endereço Completo</span>
-          <div class="modal-address">—</div>
-          <span class="modal-precision-badge"></span>
+        <div class="detail-item full-width"><span class="detail-label">Assunto</span><div class="modal-subject">-</div></div>
+        <div class="detail-item full-width highlight-bg">
+          <span class="detail-label">Endereço</span>
+          <div class="modal-address" style="font-weight:700">-</div>
         </div>
-
-        <div class="detail-item"><span class="detail-label">Complemento</span><div class="modal-complement">—</div></div>
-        <div class="detail-item"><span class="detail-label">Condomínio</span><div class="modal-condo">—</div></div>
-        <div class="detail-item"><span class="detail-label">Bloco/Apt</span><div class="modal-blockapt">—</div></div>
-        <div class="detail-item"><span class="detail-label">Bairro</span><div class="modal-district">—</div></div>
+        <div class="detail-item"><span class="detail-label">Complemento</span><div class="modal-complement">-</div></div>
+        <div class="detail-item full-width"><span class="detail-label">Referência</span><div class="modal-ref">-</div></div>
       </div>
-
       <div class="provider-toolbar">
         <button class="provider-btn active" data-provider="google">Google Maps</button>
-        <button class="provider-btn" data-provider="waze" data-open-external="true">Abrir Waze</button>
-        <button class="copy-link btn-ghost-sm">Copiar Link</button>
+        <button class="provider-btn" data-provider="bing">Bing Maps</button>
+        <button class="provider-btn" data-provider="waze" data-open-external="true">Waze</button>
+        <button class="copy-creds-btn" style="margin-right: 10px;">Copiar Dados</button>
+        <button class="copy-link-btn">Copiar Link</button>
       </div>
-      
-      <div id="mapContainer">
-        <div class="map-placeholder">Carregando mapa...</div>
-      </div>
+      <div id="mapContainer" class="map-box"><div class="map-placeholder">Carregando mapa...</div></div>
     </div>
   </template>
 
   <script src="log.js" defer></script>
 </body>
 </html>
-
 
 
 
