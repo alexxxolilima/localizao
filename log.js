@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function checkBalsa(it) {
     const txt = (it.endereco + ' ' + it.bairro + ' ' + it.referencia).toLowerCase();
-    return /balsa|riacho grande|tatetos|taquacetuba|pos balsa|pós balsa|curucutu|capivari|finco|santa cruz/i.test(txt);
+    return /balsa|itaquacetuba|Bororé|Borore|curucutu|Curucutu|Tatetos|Agua limpa|agua limpa|Jardim Santa Tereza| Jardim Borba Gato|tatetos|taquacetuba|pos balsa|pós balsa|curucutu|capivari|santa cruz/i.test(txt);
   }
 
   function populateTechFilter() {
@@ -474,6 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (PER_PAGE !== prev) { rendered = 0; resultsEl.innerHTML = ''; render(); }
   });
 });
+
 
 
 
