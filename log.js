@@ -29,8 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         openRouteBtn: document.getElementById('openRouteBtn'),
         statsDashboard: document.getElementById('statsDashboard'),
         statTotal: document.getElementById('totalCount'),
-        statBalsa: document.getElementById('balsaCount'),
-        statDone: document.getElementById('doneCount')
+        statBalsa: document.getElementById('balsaCount')
     };
 
     let state = {
@@ -76,59 +75,108 @@ document.addEventListener('DOMContentLoaded', () => {
         return String(key).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
     }
 
-    function mapData(rawJson) {
-        if (!rawJson || !rawJson.length) return [];
+    function formatDateTime(val) {
+        if (!val) return '';
+        const s = String(val).trim();
 
-        const headers = Object.keys(rawJson[0]);
-        const mapKeys = {};
+        const hasTime = s.includes(':');
+        
+        let datePart = s;
+        let timePart = '';
+        
+        if (hasTime) {
+            const parts = s.split(' ');
+            if (parts.length > 1) {
+                datePart = parts[0];
+                timePart = parts[1].substring(0, 5);
+            }
+        }
 
-        headers.forEach(h => {
+        let finalDate = datePart;
+        if (datePart.match(/^\d{4}-\d{2}-\d{2}/)) {
+            const p = datePart.split('-');
+            finalDate = `${p[2]}/${p[1]}`; 
+        } 
+        else if (datePart.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+            const p = datePart.split('/');
+            finalDate = `${p[0]}/${p[1]}`; 
+        }
+
+        if (hasTime && timePart) {
+            return `${finalDate} às ${timePart}`;
+        }
+        return finalDate;
+    }
+
+    function mapData(rows) {
+        if (!rows || rows.length < 2) return [];
+
+        const headers = rows[0]; 
+        const mapIdx = {}; 
+
+        headers.forEach((h, index) => {
+            if (!h) return;
             const norm = normalizeKey(h);
-            if (norm.includes('cliente') || norm.includes('nome')) mapKeys.cliente = h;
-            else if (norm.includes('filial')) mapKeys.filial = h;
-            else if (norm.includes('assunto') || norm.includes('motivo')) mapKeys.assunto = h;
-            else if (norm.includes('tecnico') || norm.includes('colaborador')) mapKeys.tecnico = h;
-            else if (norm.includes('endereco') || norm.includes('logradouro')) mapKeys.endereco = h;
-            else if (norm.includes('numero')) mapKeys.numero = h;
-            else if (norm.includes('complemento')) mapKeys.complemento = h;
-            else if (norm.includes('bairro')) mapKeys.bairro = h;
-            else if (norm.includes('cidade')) mapKeys.cidade = h;
-            else if (norm.includes('referencia') || norm.includes('obs')) mapKeys.referencia = h;
-            else if (norm.includes('login') || norm.includes('usuario')) mapKeys.login = h;
-            else if (norm.includes('senha') || norm.includes('password') || norm.includes('md5')) mapKeys.senha = h;
+            if (norm.includes('cliente') || norm.includes('nome')) mapIdx.cliente = index;
+            else if (norm.includes('filial')) mapIdx.filial = index;
+            else if (norm.includes('assunto') || norm.includes('motivo')) mapIdx.assunto = index;
+            else if (norm.includes('tecnico') || norm.includes('colaborador')) mapIdx.tecnico = index;
+            else if (norm.includes('endereco') || norm.includes('logradouro')) mapIdx.endereco = index;
+            else if (norm.includes('numero')) mapIdx.numero = index;
+            else if (norm.includes('complemento')) mapIdx.complemento = index;
+            else if (norm.includes('bairro')) mapIdx.bairro = index;
+            else if (norm.includes('cidade')) mapIdx.cidade = index;
+            else if (norm.includes('referencia') || norm.includes('obs')) mapIdx.referencia = index;
+            else if (norm.includes('login') || norm.includes('usuario')) mapIdx.login = index;
+            else if (norm.includes('senha') || norm.includes('password') || norm.includes('md5')) mapIdx.senha = index;
+            else if (norm.includes('agendamento')) mapIdx.agendamento = index;
+            else if (norm.includes('melhor') && norm.includes('horario')) mapIdx.horario = index;
+            else if (norm.includes('contrato') || norm.includes('plano')) mapIdx.contrato = index;
+            else if (norm.includes('data') && norm.includes('reservada')) mapIdx.dataReserva = index;
             else if (norm.includes('telefone') || norm.includes('celular') || norm.includes('whatsapp')) {
-                if (!mapKeys.telefone) mapKeys.telefone = h;
+                if (!mapIdx.telefones) mapIdx.telefones = [];
+                mapIdx.telefones.push(index);
             }
         });
 
-        return rawJson.map(row => {
+        const data = [];
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0) continue;
+
             let tels = [];
-            headers.forEach(h => {
-                if (normalizeKey(h).includes('telef') || normalizeKey(h).includes('whats') || normalizeKey(h).includes('contato')) {
-                    if (row[h]) tels.push(row[h]);
-                }
-            });
+            if (mapIdx.telefones) {
+                mapIdx.telefones.forEach(idx => {
+                    if (row[idx]) tels.push(row[idx]);
+                });
+            }
+
+            let rawAgenda = (mapIdx.agendamento !== undefined) ? row[mapIdx.agendamento] : null;
+            if (!rawAgenda && mapIdx.dataReserva !== undefined) rawAgenda = row[mapIdx.dataReserva];
 
             const item = {
-                cliente: row[mapKeys.cliente] || 'Cliente Desconhecido',
-                filial: row[mapKeys.filial] || '',
-                assunto: row[mapKeys.assunto] || '',
-                tecnico: row[mapKeys.tecnico] || '',
-                endereco: row[mapKeys.endereco] || '',
-                numero: row[mapKeys.numero] || '',
-                complemento: row[mapKeys.complemento] || '',
-                bairro: row[mapKeys.bairro] || '',
-                cidade: row[mapKeys.cidade] || '',
-                referencia: row[mapKeys.referencia] || '',
-                login: row[mapKeys.login] || '',
-                senha: row[mapKeys.senha] || '',
+                cliente: (mapIdx.cliente !== undefined) ? row[mapIdx.cliente] : 'Cliente Desconhecido',
+                filial: (mapIdx.filial !== undefined) ? row[mapIdx.filial] : '',
+                assunto: (mapIdx.assunto !== undefined) ? row[mapIdx.assunto] : '',
+                tecnico: (mapIdx.tecnico !== undefined) ? row[mapIdx.tecnico] : '',
+                endereco: (mapIdx.endereco !== undefined) ? row[mapIdx.endereco] : '',
+                numero: (mapIdx.numero !== undefined) ? row[mapIdx.numero] : '',
+                complemento: (mapIdx.complemento !== undefined) ? row[mapIdx.complemento] : '',
+                bairro: (mapIdx.bairro !== undefined) ? row[mapIdx.bairro] : '',
+                cidade: (mapIdx.cidade !== undefined) ? row[mapIdx.cidade] : '',
+                referencia: (mapIdx.referencia !== undefined) ? row[mapIdx.referencia] : '',
+                login: (mapIdx.login !== undefined) ? row[mapIdx.login] : '',
+                senha: (mapIdx.senha !== undefined) ? row[mapIdx.senha] : '',
+                horario: (mapIdx.horario !== undefined) ? row[mapIdx.horario] : '',
+                contrato: (mapIdx.contrato !== undefined) ? row[mapIdx.contrato] : '',
+                agendamento: rawAgenda,
                 telefone: tels.join(' / '),
-                raw: row,
-                done: false
+                raw: row
             };
-            
-            const fullAddr = (item.endereco + ' ' + item.bairro + ' ' + item.cidade).toLowerCase();
-            const cep = (String(row['CEP'] || row['cep'] || '')).replace(/\D/g, '').substring(0,3);
+
+            const fullAddr = (String(item.endereco || '') + ' ' + String(item.bairro || '') + ' ' + String(item.cidade || '')).toLowerCase();
+            const cepMatch = String(item.endereco).match(/\d{5}-?\d{3}/);
+            const cep = cepMatch ? cepMatch[0].replace(/\D/g, '').substring(0,3) : '';
 
             if (cep === '078' || fullAddr.includes('franco')) item.region = '078';
             else if (cep === '048' || fullAddr.includes('graja')) item.region = '048';
@@ -140,9 +188,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 item.region = 'other';
             }
-            
-            return item;
-        }).filter(i => !REGEX.BLOCKED.test(i.assunto));
+
+            if (!REGEX.BLOCKED.test(item.assunto)) {
+                data.push(item);
+            }
+        }
+        return data;
     }
 
     function buildAddress(it) {
@@ -165,16 +216,29 @@ document.addEventListener('DOMContentLoaded', () => {
         
         card.classList.add(`region-${it.region}`);
         if (!hasAddr) card.classList.add('no-addr');
-        if (it.done) card.classList.add('is-done');
 
         card.querySelector('.card-client').textContent = it.cliente;
-        card.querySelector('.card-subject').textContent = it.assunto;
+        
+        let subjectText = it.assunto;
+        if (it.agendamento) {
+            const fmtDate = formatDateTime(it.agendamento);
+            if (fmtDate && fmtDate.length > 2) {
+                subjectText = `📅 ${fmtDate} — ${it.assunto}`;
+            }
+        }
+        card.querySelector('.card-subject').textContent = subjectText;
+        
         card.querySelector('.card-tech').textContent = it.tecnico || 'Sem Técnico';
         card.querySelector('.card-address').textContent = hasAddr ? fullAddr : 'Endereço não identificado';
         
         const badgeBox = card.querySelector('.card-badges');
         if (it.region === '098-balsa') badgeBox.innerHTML += `<span class="badge-count" style="background:var(--warning);color:#000">⚠️ Balsa</span>`;
         if (!hasAddr) badgeBox.innerHTML += `<span class="badge-count" style="background:var(--danger);color:#fff">Sem Endereço</span>`;
+        
+        if (it.contrato && String(it.contrato).includes('MB')) {
+             const speed = it.contrato.split(' ').pop();
+             badgeBox.innerHTML += `<span class="badge-count" style="background:var(--bg-element);border:1px solid var(--border)">${speed}</span>`;
+        }
 
         const mapsLink = hasAddr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddr)}` : '#';
         
@@ -200,18 +264,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnDetails = card.querySelector('.details-btn');
         btnDetails.onclick = (e) => { e.stopPropagation(); openDetails(it); };
         card.onclick = (e) => { if(e.target === card || e.target.closest('.card-main-info')) openDetails(it); };
-
-        const btnCheck = document.createElement('button');
-        btnCheck.className = 'action-btn btn-check';
-        btnCheck.title = "Marcar como Concluído";
-        btnCheck.innerHTML = '<span style="color: var(--success); font-weight: 800;">✔</span>';
-        btnCheck.onclick = (e) => {
-            e.stopPropagation();
-            it.done = !it.done;
-            card.classList.toggle('is-done');
-            updateCounters();
-        };
-        card.querySelector('.card-actions').prepend(btnCheck);
 
         return clone;
     }
@@ -249,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const quick = state.activeFilter;
 
         state.filtered = state.items.filter(it => {
-            const matchText = (it.cliente + ' ' + it.endereco + ' ' + it.login + ' ' + it.assunto).toLowerCase().includes(term);
+            const matchText = (String(it.cliente) + ' ' + String(it.endereco) + ' ' + String(it.login) + ' ' + String(it.assunto)).toLowerCase().includes(term);
             const matchTech = !tech || it.tecnico === tech;
             const matchRegion = region === 'all' || it.region === region;
             let matchQuick = true;
@@ -265,8 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateCounters() {
         const balsaCount = state.items.filter(it => it.region === '098-balsa').length;
-        const doneCount = state.items.filter(it => it.done).length;
-
         const badge = document.querySelector('.badge-count[data-region="098-balsa"]');
         if (badge) {
             badge.textContent = balsaCount;
@@ -275,7 +325,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (els.statTotal) els.statTotal.textContent = state.items.length;
         if (els.statBalsa) els.statBalsa.textContent = balsaCount;
-        if (els.statDone) els.statDone.textContent = doneCount;
 
         if (els.statsDashboard && state.items.length > 0) {
             els.statsDashboard.classList.remove('hidden');
@@ -306,6 +355,10 @@ document.addEventListener('DOMContentLoaded', () => {
         tpl.querySelector('.modal-subject').textContent = it.assunto;
         tpl.querySelector('.modal-address').textContent = addr || 'Endereço não cadastrado';
         tpl.querySelector('.modal-ref').textContent = it.referencia || '-';
+        
+        tpl.querySelector('.modal-contract').textContent = it.contrato || 'Não informado';
+        tpl.querySelector('.modal-agenda').textContent = formatDateTime(it.agendamento) || 'Sem agendamento';
+        tpl.querySelector('.modal-periodo').textContent = it.horario || '-';
 
         const mapContainer = tpl.getElementById('mapContainer');
         const gUrl = `https://maps.google.com/maps?q=${mapQ}&t=m&z=15&output=embed&iwloc=near`;
@@ -344,13 +397,13 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.onload = (e) => {
             try {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: false, defval: "" });
 
-                if (jsonData.length === 0) throw new Error("Planilha vazia");
+                if (rows.length < 2) throw new Error("Planilha vazia ou sem cabeçalho");
 
-                state.items = mapData(jsonData);
+                state.items = mapData(rows);
                 
                 populateSelects();
                 setLoader(100, 'Finalizando...');
@@ -468,7 +521,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.open(`https://www.google.com/maps/dir//${dests}`, '_blank');
     };
 });
-
 
 
 
