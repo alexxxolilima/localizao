@@ -1,153 +1,359 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Athon Localizador">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Athon Localizador - Gestão de Ordens de Serviço e Rotas">
+  <meta name="theme-color" content="#0f172a">
   <meta name="author" content="Alex Lima, Gustavo Matos, Bianca Marques">
+
   <title>Athon Localizador</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
   <link rel="stylesheet" href="style.css">
   <link rel="shortcut icon" href="OIP.jpg" type="image/png">
+
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js" defer></script>
 </head>
 
 <body class="dark-mode">
-  <main class="app container" id="appRoot">
-    <header class="header">
-      <div class="header-branding">
-        <img id="companyLogo" class="company-logo" src="OIP.jpg" alt="Logo">
-        <div class="brand-text">
-          <div class="brand">Athon Localizador</div>
+
+  <div id="globalLoader" class="loader-overlay hidden">
+    <div class="loader-content">
+      <div class="spinner"></div>
+      <div class="loader-text">Processando dados...</div>
+      <div class="loader-progress-track">
+        <div id="loaderBar" class="loader-progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <main class="app-container">
+
+    <header class="app-header">
+      <div class="brand-wrapper">
+        <div class="logo-box">
+          <img src="OIP.jpg" alt="Athon Logo" class="logo-img">
+        </div>
+        <div class="brand-info">
+          <h1>Athon Localizador</h1>
         </div>
       </div>
-      <div class="header-actions">
-        <button id="themeBtn" class="theme-btn" title="Alternar Tema">
-          <svg class="icon-theme" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+
+      <div class="header-controls">
+        <button id="themeBtn" class="icon-btn" aria-label="Alternar Tema" title="Mudar Tema">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path
+              d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z" />
+          </svg>
         </button>
       </div>
     </header>
 
-    <section class="card form-card" id="uploadSection">
-      <label id="dropZone" class="dropzone">
-        <input id="fileInput" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-        <div class="drop-content">
-          <div class="drop-info">
-            <div id="fileDisplayName" class="text-main-bold">Escolha o arquivo </div>
-          </div>
-          <button id="loadBtn" class="btn btn-primary" disabled>CARREGAR</button>
+    <section id="statsDashboard" class="stats-grid hidden fade-in-up">
+      <div class="stat-card">
+        <div class="stat-icon bg-blue">📋</div>
+        <div class="stat-info">
+          <span class="stat-value" id="totalCount">0</span>
+          <span class="stat-label">Total O.S.</span>
         </div>
-      </label>
-      <div id="progressRow" class="mt-4 hidden">
-        <div class="progress-track">
-          <div id="progressBar" class="progress-bar" style="width:0%"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon bg-orange">⚠️</div>
+        <div class="stat-info">
+          <span class="stat-value" id="balsaCount">0</span>
+          <span class="stat-label">Região Balsa</span>
         </div>
+      </div>
       </div>
     </section>
 
-    <div class="control-panel mt-6">
-      <div class="search-row card">
-        <div class="input-group flex-grow">
-          <input id="filter" class="input-clean" placeholder="Pesquisar...">
+    <section class="upload-section fade-in-up">
+      <label id="dropZone" class="dropzone-card">
+        <input id="fileInput" type="file" accept=".csv,.xls,.xlsx" hidden>
+        <div class="dropzone-content">
+          <div class="icon-upload-wrapper">
+            <svg class="icon-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
+          <div class="text-group">
+            <h2 id="fileDisplayName">Escolha a sua planilha</h2>
+          </div>
+          <button id="loadBtn" class="btn btn-primary btn-lg" disabled>
+            <span>Carregar Dados</span>
+            <svg class="icon-sm" viewBox="0 0 24 24">
+              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" />
+            </svg>
+          </button>
         </div>
-        <div class="input-group" style="min-width: 200px;">
-          <select id="techFilter" class="input-clean">
+      </label>
+    </section>
+
+    <section id="toolbarSection" class="toolbar-section hidden fade-in-up">
+      <div class="search-bar-wrapper">
+        <div class="search-input-group">
+          <svg class="search-icon" viewBox="0 0 24 24">
+            <path
+              d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+          </svg>
+          <input id="filter" type="text" placeholder="Buscar por cliente, endereço, OS ou login..." autocomplete="off">
+        </div>
+      </div>
+
+      <div class="filters-row">
+        <div class="select-wrapper">
+          <select id="techFilter">
             <option value="">Todos os Técnicos</option>
           </select>
         </div>
+        <div class="select-wrapper">
+          <select id="regionFilter">
+            <option value="all">Todas as Regiões</option>
+            <option value="048">Grajaú</option>
+            <option value="098-balsa">Balsa</option>
+            <option value="098-riacho">Riacho</option>
+            <option value="098-sbc">SBC Centro</option>
+            <option value="041">MV (Mundo Virtual)</option>
+            <option value="078">Franco</option>
+            <option value="other">Outros</option>
+          </select>
+        </div>
+
+        <div class="quick-actions">
+          <button class="chip active" data-filter="all">Todos</button>
+          <button class="chip warning-chip" data-filter="balsa">
+            <span>⚠️ Balsa</span>
+            <span class="badge-count hidden" data-region="098-balsa">0</span>
+          </button>
+          <button class="chip danger-chip" data-filter="noaddr">Sem Endereço</button>
+        </div>
       </div>
 
-      <div class="actions-row">
-        <div class="quick-filters">
-          <button class="filter-chip active" data-filter="all">Todas</button>
-          <button class="filter-chip" data-filter="balsa">⚠️ Balsa</button>
-          <button class="filter-chip" data-filter="noaddr">🟧 Sem Endereço</button>
-        </div>
-        <div class="tools-group">
-          <button id="copyLinkListBtn" class="btn btn-ghost">Copiar Links</button>
-          <button id="openRouteBtn" class="btn btn-ghost">Ver Rota (Maps)</button>
-          <button id="exportBtn" class="btn btn-ghost">Excel</button>
-        </div>
+      <div class="bulk-actions">
+        <button id="copyLinkListBtn" class="btn btn-ghost btn-sm">
+          <svg class="icon-xs" viewBox="0 0 24 24">
+            <path
+              d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+          </svg>
+          Copiar Lista
+        </button>
+        <button id="openRouteBtn" class="btn btn-ghost btn-sm">
+          <svg class="icon-xs" viewBox="0 0 24 24">
+            <path
+              d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+          </svg>
+          Gerar Rota (Maps)
+        </button>
       </div>
+    </section>
+
+    <section id="results" class="results-grid"></section>
+
+    <div class="load-more-container">
+      <button id="moreBtn" class="btn btn-secondary hidden">Carregar mais resultados</button>
     </div>
 
-    <section id="results" class="grid mt-6"></section>
-
-    <div class="mt-6 text-center">
-      <button id="moreBtn" class="btn btn-ghost hidden">Carregar mais</button>
-    </div>
   </main>
 
-  <div id="dim" class="overlay-dim hidden"></div>
-  <div id="overlay" class="overlay hidden">
-    <div class="modal card">
-      <div class="modal-head">
-        <div id="modalTitle">Detalhes</div>
-        <button id="closeModal" class="close-btn">✕</button>
+  <div id="overlay" class="modal-overlay hidden">
+    <div class="modal-card scale-in">
+      <div class="modal-header">
+        <div class="modal-header-content">
+          <h2 id="modalTitle">Detalhes da O.S.</h2>
+          <span id="modalSubtitle" class="modal-subtitle">Visualização completa</span>
+        </div>
+        <button id="closeModal" class="btn-close">✕</button>
       </div>
-      <div id="modalBody" class="modal-body"></div>
+
+      <div id="modalBody" class="modal-content">
+      </div>
+    </div>
+  </div>
+
+  <div id="templatesModal" class="modal-overlay hidden" style="z-index: 10001;">
+    <div class="modal-card modal-sm scale-in">
+      <div class="modal-header">
+        <h3>Escolha a Mensagem</h3>
+        <button class="btn-close" onclick="document.getElementById('templatesModal').classList.add('hidden')">✕</button>
+      </div>
+      <div class="modal-content-padded">
+        <div style="margin-bottom: 15px;">
+          <button id="manualPhoneTriggerBtn" class="btn btn-secondary full-width" style="justify-content: center;">
+            ✏️ Inserir/Alterar Número Manual
+          </button>
+        </div>
+        <div class="template-list">
+          <button class="template-option"
+            data-template="{{saudacao}}, tudo bem? Falo com {{tratamento}} {{nome}}? Sou técnico da Athon. Temos uma ordem de serviço agendada para hoje! Podemos confirmar?">
+            <span class="tmpl-icon">📅</span>
+            <div class="tmpl-text">
+              <strong>Confirmar Agendamento</strong>
+              <small>Padrão para início do dia</small>
+            </div>
+          </button>
+          <button class="template-option"
+            data-template="{{saudacao}}, aqui é o técnico da Athon. Estou com dificuldades para localizar a residência. Poderia me enviar a localização em tempo real pelo WhatsApp?">
+            <span class="tmpl-icon">📍</span>
+            <div class="tmpl-text">
+              <strong>Pedir Localização</strong>
+              <small>Quando não encontrar o nº</small>
+            </div>
+          </button>
+          <button class="template-option"
+            data-template="{{saudacao}}, o técnico está a caminho do seu endereço. Previsão de chegada em breve.">
+            <span class="tmpl-icon">🚚</span>
+            <div class="tmpl-text">
+              <strong>Estou a caminho</strong>
+              <small>Aviso de deslocamento</small>
+            </div>
+          </button>
+          <button class="template-option"
+            data-template="{{saudacao}}, estive no local e não localizei ninguém. Podemos reagendar?">
+            <span class="tmpl-icon">🏠</span>
+            <div class="tmpl-text">
+              <strong>Cliente Ausente</strong>
+              <small>Tentar reagendar</small>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="numberEntryModal" class="modal-overlay hidden" style="z-index: 10002;">
+    <div class="modal-card modal-xs scale-in">
+      <div class="modal-header">
+        <h3>Inserir Telefone</h3>
+        <button class="btn-close"
+          onclick="document.getElementById('numberEntryModal').classList.add('hidden')">✕</button>
+      </div>
+      <div class="modal-content-padded">
+        <label class="input-label">Número com DDD</label>
+        <input id="inlinePhoneInput" type="tel" class="form-input" placeholder="(11) 99999-9999">
+        <button id="savePhoneBtn" class="btn btn-primary full-width mt-4">Salvar e Abrir Menu</button>
+      </div>
     </div>
   </div>
 
   <template id="cardTemplate">
-    <div class="result-card card" tabindex="0">
-      <div class="card-badges"></div>
-      <div class="card-header">
-        <div class="card-title">
-          <h3 class="card-client">Nome</h3>
-          <div class="sub"><span class="card-subject">Assunto</span></div>
-        </div>
-        <div class="card-meta">
-          <span class="chip card-branch">Filial</span>
-          <div class="tech-display">👤 <span class="card-tech">Tecnico</span></div>
+    <article class="result-card" tabindex="0">
+      <div class="card-top">
+        <div class="card-badges"></div>
+        <div class="card-tech-badge">
+          <span class="tech-icon">👤</span>
+          <span class="card-tech">Nome Técnico</span>
         </div>
       </div>
-      <div class="address-box">
-        <span class="card-address">Endereço...</span>
+
+      <div class="card-main-info">
+        <h3 class="card-client">Nome do Cliente</h3>
+        <p class="card-subject">Assunto da OS</p>
       </div>
+
+      <div class="card-address-box">
+        <svg class="icon-loc" viewBox="0 0 24 24">
+          <path
+            d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+        </svg>
+        <span class="card-address">Endereço carregando...</span>
+      </div>
+
       <div class="card-actions">
-        <a class="btn-action btn-maps open-maps" target="_blank" title="Google Maps">Maps</a>
-        <a class="btn-action btn-whatsapp open-zap" target="_blank" title="WhatsApp">Zap</a>
-        <button class="btn-action btn-creds copy-creds" title="Copiar Login">
-           <svg style="width:16px; height:16px; fill:currentColor" viewBox="0 0 24 24"><path d="M21 10h-8.35A5.99 5.99 0 0 0 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6a5.99 5.99 0 0 0 5.65-4H17v4h4v-4h2v-4zM7 15c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/></svg>
+        <a href="#" target="_blank" class="action-btn btn-maps open-maps" title="Abrir Google Maps">
+          <span>Maps</span>
+        </a>
+        <button class="action-btn btn-whatsapp open-zap" title="Enviar Mensagem">
+          <span>Zap</span>
         </button>
-        <button class="btn-action btn-copy copy-btn" title="Copiar Link">Link</button>
-        <button class="btn-action btn-details details-btn">Ver</button>
+        <button class="action-btn btn-creds copy-creds" title="Copiar Login/Senha">
+          <span>Login</span>
+        </button>
+        <button class="action-btn btn-details details-btn" title="Ver Detalhes Completos">
+          <span>Ver +</span>
+        </button>
       </div>
-    </div>
+    </article>
   </template>
 
   <template id="modalTemplate">
-    <div class="modal-content-wrapper">
-      <div class="result-header modal-client">-</div>
-      <div class="detail-grid">
-        <div class="detail-item"><span class="detail-label">Filial</span><div class="modal-branch">-</div></div>
-        <div class="detail-item"><span class="detail-label">Técnico</span><div class="modal-tech">-</div></div>
-        <div class="detail-item"><span class="detail-label">Login</span><div class="modal-login highlight-text">-</div></div>
-        <div class="detail-item"><span class="detail-label">Telefone</span><div class="modal-phone">-</div></div>
-        
-        <div class="detail-item full-width"><span class="detail-label">Assunto</span><div class="modal-subject">-</div></div>
-        <div class="detail-item full-width highlight-bg">
-          <span class="detail-label">Endereço</span>
-          <div class="modal-address" style="font-weight:700">-</div>
+    <div class="modal-grid">
+      <div class="modal-info-col">
+        <div class="info-group highlight-group">
+          <label>Cliente</label>
+          <div class="modal-client text-lg">-</div>
         </div>
-        <div class="detail-item"><span class="detail-label">Complemento</span><div class="modal-complement">-</div></div>
-        <div class="detail-item full-width"><span class="detail-label">Referência</span><div class="modal-ref">-</div></div>
+
+        <div class="grid-2-col">
+          <div class="info-group">
+            <label>Filial</label>
+            <div class="modal-branch">-</div>
+          </div>
+          <div class="info-group">
+            <label>Técnico</label>
+            <div class="modal-tech">-</div>
+          </div>
+        </div>
+
+        <div class="info-group login-box">
+          <div class="login-header">
+            <label>Credenciais PPPoE</label>
+            <button class="copy-creds-btn btn-xs">Copiar</button>
+          </div>
+          <div class="modal-login mono-font">-</div>
+        </div>
+
+        <div class="info-group">
+          <label>Telefones</label>
+          <div class="modal-phone">-</div>
+        </div>
+
+        <div class="info-group">
+          <label>Assunto / Problema</label>
+          <div class="modal-subject">-</div>
+        </div>
+
+        <div class="info-group">
+          <label>Referência</label>
+          <div class="modal-ref">-</div>
+        </div>
       </div>
-      <div class="provider-toolbar">
-        <button class="provider-btn active" data-provider="google">Google Maps</button>
-        <button class="provider-btn" data-provider="waze" data-open-external="true">Waze</button>
-        <button class="copy-creds-btn" style="margin-right: 10px;">Copiar Dados</button>
-        <button class="copy-link-btn">Copiar Link</button>
+
+      <div class="modal-map-col">
+        <div class="address-card">
+          <div class="address-header">
+            <label>Localização</label>
+            <button class="copy-link-btn btn-xs">Copiar Link</button>
+          </div>
+          <div class="modal-address">-</div>
+          <div class="modal-complement small-text">-</div>
+        </div>
+
+        <div class="map-toolbar">
+          <button class="provider-btn active" data-provider="google">Google</button>
+          <button class="provider-btn" data-provider="waze">Waze</button>
+        </div>
+
+        <div id="mapContainer" class="map-wrapper">
+          <div class="map-placeholder">Carregando mapa...</div>
+        </div>
       </div>
-      <div id="mapContainer" class="map-box"><div class="map-placeholder">Carregando mapa...</div></div>
     </div>
   </template>
 
-  <script src="log.js" defer></script>
+  <script src="log.js"></script>
 </body>
+
 </html>
-
-
 
 
 
