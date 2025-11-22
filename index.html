@@ -286,74 +286,90 @@
   </template>
 
   <template id="modalTemplate">
-    <div class="modal-grid">
-      <div class="modal-info-col">
-        <div class="info-group highlight-group">
-          <label>Cliente</label>
-          <div class="modal-client text-lg">-</div>
-        </div>
+        <div class="modal-grid">
+            <div class="modal-info-col">
+                <div class="info-group highlight-group">
+                    <label>Cliente</label>
+                    <div class="modal-client text-lg">-</div>
+                </div>
 
-        <div class="grid-2-col">
-          <div class="info-group">
-            <label>Filial</label>
-            <div class="modal-branch">-</div>
-          </div>
-          <div class="info-group">
-            <label>Técnico</label>
-            <div class="modal-tech">-</div>
-          </div>
-        </div>
+                <div class="grid-2-col" style="margin-bottom: 10px;">
+                    <div class="info-group" style="background: rgba(34, 197, 94, 0.1); padding: 8px; border-radius: 6px; border: 1px solid rgba(34, 197, 94, 0.2);">
+                        <label style="color: var(--success);">Agendamento</label>
+                        <div class="modal-agenda" style="font-weight: 700;">-</div>
+                    </div>
+                    <div class="info-group">
+                        <label>Melhor Horário</label>
+                        <div class="modal-periodo">-</div>
+                    </div>
+                </div>
+                
+                <div class="info-group">
+                    <label>Plano / Contrato</label>
+                    <div class="modal-contract" style="font-weight: 600; color: var(--primary);">-</div>
+                </div>
+                <div class="grid-2-col">
+                    <div class="info-group">
+                        <label>Filial</label>
+                        <div class="modal-branch">-</div>
+                    </div>
+                    <div class="info-group">
+                        <label>Técnico</label>
+                        <div class="modal-tech">-</div>
+                    </div>
+                </div>
 
-        <div class="info-group login-box">
-          <div class="login-header">
-            <label>Credenciais PPPoE</label>
-            <button class="copy-creds-btn btn-xs">Copiar</button>
-          </div>
-          <div class="modal-login mono-font">-</div>
-        </div>
+                <div class="info-group login-box">
+                    <div class="login-header">
+                        <label>Credenciais PPPoE</label>
+                        <button class="copy-creds-btn btn-xs">Copiar</button>
+                    </div>
+                    <div class="modal-login mono-font">-</div>
+                </div>
 
-        <div class="info-group">
-          <label>Telefones</label>
-          <div class="modal-phone">-</div>
-        </div>
+                <div class="info-group">
+                    <label>Telefones</label>
+                    <div class="modal-phone">-</div>
+                </div>
 
-        <div class="info-group">
-          <label>Assunto / Problema</label>
-          <div class="modal-subject">-</div>
-        </div>
+                <div class="info-group">
+                    <label>Assunto / Problema</label>
+                    <div class="modal-subject">-</div>
+                </div>
 
-        <div class="info-group">
-          <label>Referência</label>
-          <div class="modal-ref">-</div>
-        </div>
-      </div>
+                <div class="info-group">
+                    <label>Referência</label>
+                    <div class="modal-ref">-</div>
+                </div>
+            </div>
 
-      <div class="modal-map-col">
-        <div class="address-card">
-          <div class="address-header">
-            <label>Localização</label>
-            <button class="copy-link-btn btn-xs">Copiar Link</button>
-          </div>
-          <div class="modal-address">-</div>
-          <div class="modal-complement small-text">-</div>
-        </div>
+            <div class="modal-map-col">
+                <div class="address-card">
+                    <div class="address-header">
+                        <label>Localização</label>
+                        <button class="copy-link-btn btn-xs">Copiar Link</button>
+                    </div>
+                    <div class="modal-address">-</div>
+                    <div class="modal-complement small-text">-</div>
+                </div>
 
-        <div class="map-toolbar">
-          <button class="provider-btn active" data-provider="google">Google</button>
-          <button class="provider-btn" data-provider="waze">Waze</button>
-        </div>
+                <div class="map-toolbar">
+                    <button class="provider-btn active" data-provider="google">Google</button>
+                    <button class="provider-btn" data-provider="waze">Waze</button>
+                </div>
 
-        <div id="mapContainer" class="map-wrapper">
-          <div class="map-placeholder">Carregando mapa...</div>
+                <div id="mapContainer" class="map-wrapper">
+                    <div class="map-placeholder">Carregando mapa...</div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  </template>
+    </template>
 
   <script src="log.js"></script>
 </body>
 
 </html>
+
 
 
 
