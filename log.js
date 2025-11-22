@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeCategory = 'all';
   let PER_PAGE = window.innerWidth < 600 ? 6 : window.innerWidth < 900 ? 12 : 50;
   const BLOCKED_SUBJECT_RE = /\b(retirada|reagend|tentativa|^re$)\b/i;
+  let sheetJsLoading = null;
 
   function setStatus(txt) { if(fileStatus) fileStatus.textContent = txt; }
   function showProgress(p) {
@@ -74,19 +75,32 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadSheetJs() {
-    if(window.XLSX) return window.XLSX;
-    return new Promise((resolve, reject) => {
+    if (window.XLSX) return window.XLSX;
+    if (sheetJsLoading) return sheetJsLoading;
+    sheetJsLoading = new Promise((resolve, reject) => {
       const s = document.createElement('script');
       s.src = "https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js";
       s.onload = () => resolve(window.XLSX);
       s.onerror = () => reject(new Error("Erro SheetJS"));
       document.head.appendChild(s);
     });
+    return sheetJsLoading;
   }
 
   function parseCSVManual(text) {
-    const firstLine = (text || '').split('\n')[0] || '';
-    const delimiter = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+    text = text || '';
+    const firstLine = text.split('\n')[0] || '';
+    const tabCount = (firstLine.match(/\t/g) || []).length;
+    const semCount = (firstLine.match(/;/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    let delimiter = ',';
+    if (tabCount > semCount && tabCount > commaCount) delimiter = '\t';
+    else if (semCount > commaCount) delimiter = ';';
+    else if (commaCount > semCount) delimiter = ',';
+    else {
+      const useSem = confirm('Delimitador ambíguo. Usar ponto-e-vírgula (OK) ou vírgula (Cancelar)?');
+      delimiter = useSem ? ';' : ',';
+    }
     const rows = [];
     let curRow = [];
     let curVal = '';
@@ -116,6 +130,13 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.onerror = reject;
         reader.readAsText(file, 'ISO-8859-1');
     });
+  }
+
+  function normalizeRows(rawRows) {
+    return rawRows.map(row => row.map(cell => {
+      if (cell === undefined || cell === null) return '';
+      return String(cell).replace(/\u00A0/g, ' ').trim();
+    }));
   }
 
   function mapData(rawRows) {
@@ -151,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const data = [];
     for (let i = 1; i < rawRows.length; i++) {
       const row = rawRows[i];
-      if (!row || row.length < 2) continue;
+      if (!row || row.length < 1) continue;
       const it = {};
       for (const key in schema) {
         it[key] = '';
@@ -202,7 +223,112 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function createCard(it) {
+  function showToast(txt) {
+    const t = document.createElement('div');
+    t.textContent = txt;
+    t.style.position = 'fixed';
+    t.style.right = '20px';
+    t.style.bottom = '20px';
+    t.style.background = 'rgba(0,0,0,0.8)';
+    t.style.color = 'white';
+    t.style.padding = '10px 14px';
+    t.style.borderRadius = '8px';
+    t.style.zIndex = '10001';
+    t.style.boxShadow = '0 6px 22px rgba(0,0,0,0.4)';
+    t.style.fontWeight = '700';
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.transition = 'opacity 0.4s'; t.style.opacity = '0'; }, 1400);
+    setTimeout(() => { try{document.body.removeChild(t);}catch(e){} }, 2000);
+  }
+
+  function createTemplateMessage(it, template) {
+    const hour = new Date().getHours();
+    const saudacao = hour < 12 ? 'Bom dia' : 'Boa tarde';
+    let tratamento = 'Sr./Sra.';
+    const name = (it.cliente || '').trim();
+    if (/\b(sra|senhora|srt[aã])\b/i.test(name)) tratamento = 'Sra.';
+    else if (/\b(sr|senhor)\b/i.test(name)) tratamento = 'Sr.';
+    return template.replace(/\{\{saudacao\}\}/gi, saudacao).replace(/\{\{tratamento\}\}/gi, tratamento).replace(/\{\{nome\}\}/gi, name);
+  }
+
+  function showTemplatePicker(it, anchorEl) {
+    const templates = [
+      '{{saudacao}}, tudo bem? Falo com {{tratamento}} {{nome}}? Temos uma ordem de serviço agendada para a data de hoje! Podemos confirmar?',
+      '{{saudacao}}, o técnico está tentando localizar a residência, poderia por gentileza encaminhar a localização em tempo real?'
+    ];
+    const picker = document.createElement('div');
+    picker.style.position = 'absolute';
+    picker.style.zIndex = '10002';
+    picker.style.background = 'var(--bg-card, #1e293b)';
+    picker.style.border = '1px solid rgba(255,255,255,0.06)';
+    picker.style.padding = '10px';
+    picker.style.borderRadius = '10px';
+    picker.style.boxShadow = '0 8px 30px rgba(0,0,0,0.4)';
+    picker.style.minWidth = '260px';
+    picker.style.display = 'flex';
+    picker.style.flexDirection = 'column';
+    picker.style.gap = '8px';
+    const rect = anchorEl.getBoundingClientRect();
+    const top = rect.bottom + window.scrollY + 8;
+    const left = Math.min(rect.left + window.scrollX, window.innerWidth - 300);
+    picker.style.top = `${top}px`;
+    picker.style.left = `${left}px`;
+    templates.forEach((tpl, i) => {
+      const b = document.createElement('button');
+      b.textContent = i === 0 ? 'Confirmar agendamento' : 'Pedir localização';
+      b.style.padding = '8px 10px';
+      b.style.borderRadius = '8px';
+      b.style.border = '1px solid rgba(255,255,255,0.04)';
+      b.style.background = 'transparent';
+      b.style.color = 'var(--text-main, #f8fafc)';
+      b.style.fontWeight = '700';
+      b.onclick = (e) => {
+        e.stopPropagation();
+        const text = createTemplateMessage(it, tpl);
+        const preview = confirm(`Mensagem:\n\n${text}\n\nAbrir no WhatsApp?`);
+        if (preview) {
+          const url = getWhatsAppLink(it.telefone, text);
+          if (url === '#') alert('Número inválido.');
+          else window.open(url, '_blank');
+        }
+        try{document.body.removeChild(picker);}catch(err){}
+      };
+      picker.appendChild(b);
+    });
+    const editBtn = document.createElement('button');
+    editBtn.textContent = 'Editar mensagem';
+    editBtn.style.padding = '8px 10px';
+    editBtn.style.borderRadius = '8px';
+    editBtn.style.border = '1px solid rgba(255,255,255,0.04)';
+    editBtn.style.background = 'transparent';
+    editBtn.style.color = 'var(--text-main, #f8fafc)';
+    editBtn.style.fontWeight = '700';
+    editBtn.onclick = (e) => {
+      e.stopPropagation();
+      const defaultText = createTemplateMessage(it, templates[0]);
+      const edited = prompt('Editar mensagem:', defaultText);
+      if (edited !== null) {
+        const url = getWhatsAppLink(it.telefone, edited);
+        if (url === '#') alert('Número inválido.');
+        else window.open(url, '_blank');
+      }
+      try{document.body.removeChild(picker);}catch(err){}
+    };
+    picker.appendChild(editBtn);
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancelar';
+    cancelBtn.style.padding = '8px 10px';
+    cancelBtn.style.borderRadius = '8px';
+    cancelBtn.style.border = '1px solid rgba(255,255,255,0.04)';
+    cancelBtn.style.background = 'transparent';
+    cancelBtn.style.color = 'var(--text-muted, #94a3b8)';
+    cancelBtn.onclick = (e) => { e.stopPropagation(); try{document.body.removeChild(picker);}catch(err){} };
+    picker.appendChild(cancelBtn);
+    document.body.appendChild(picker);
+    setTimeout(() => { const onDoc = (ev) => { if (!picker.contains(ev.target)) try{document.body.removeChild(picker);window.removeEventListener('click', onDoc);}catch(e){} }; window.addEventListener('click', onDoc); }, 10);
+  }
+
+  function createCard(it, index) {
     const clone = cardTemplate.content.cloneNode(true);
     const card = clone.querySelector('.result-card');
     const fullAddr = buildAddress(it);
@@ -211,17 +337,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const badgeBox = card.querySelector('.card-badges');
     if(isBalsa) {
         card.classList.add('is-balsa');
-        badgeBox.innerHTML += `<span class="special-badge badge-balsa">⚠️ Região Balsa</span>`;
+        const b = document.createElement('span'); b.className = 'special-badge badge-balsa'; b.textContent = '⚠️ Região Balsa'; badgeBox.appendChild(b);
     }
     if(!hasAddr) {
         card.classList.add('is-warning');
-        badgeBox.innerHTML += `<span class="special-badge badge-warning">🟧 Sem Endereço</span>`;
+        const b2 = document.createElement('span'); b2.className = 'special-badge badge-warning'; b2.textContent = '🟧 Sem Endereço'; badgeBox.appendChild(b2);
     }
-    card.querySelector('.card-client').textContent = it.cliente || 'Cliente Desconhecido';
-    card.querySelector('.card-subject').textContent = it.assunto || '-';
-    card.querySelector('.card-branch').textContent = it.filial || 'Matriz';
-    card.querySelector('.card-tech').textContent = it.tecnico || 'Sem Técnico';
-    card.querySelector('.card-address').textContent = hasAddr ? fullAddr : 'Endereço não identificado';
+    const clientEl = card.querySelector('.card-client');
+    const subjectEl = card.querySelector('.card-subject');
+    const branchEl = card.querySelector('.card-branch');
+    const techEl = card.querySelector('.card-tech');
+    const addrEl = card.querySelector('.card-address');
+    clientEl.textContent = it.cliente || 'Cliente Desconhecido';
+    subjectEl.textContent = it.assunto || '-';
+    branchEl.textContent = it.filial || 'Matriz';
+    techEl.textContent = it.tecnico || 'Sem Técnico';
+    addrEl.textContent = hasAddr ? fullAddr : 'Endereço não identificado';
     const mapsLink = hasAddr ? getGoogleMapsLink(fullAddr || it.cidade) : '#';
     const btnMaps = card.querySelector('.open-maps');
     btnMaps.href = mapsLink;
@@ -241,6 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
         navigator.clipboard.writeText(creds).then(() => {
             const original = btnCreds.innerHTML;
             btnCreds.innerHTML = '<span style="font-size:10px">OK</span>';
+            showToast('Credenciais copiadas');
             setTimeout(() => btnCreds.innerHTML = original, 1500);
         });
     };
@@ -250,6 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!hasAddr) return alert('Sem endereço válido.');
         navigator.clipboard.writeText(mapsLink).then(() => {
             btnCopy.textContent = 'Copiado!';
+            showToast('Link copiado');
             setTimeout(() => btnCopy.textContent = 'Link', 2000);
         });
     };
@@ -265,25 +398,66 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         e.stopPropagation();
         if (!it.telefone) return;
-        const hour = new Date().getHours();
-        const greeting = hour < 12 ? 'Bom dia' : 'Boa tarde';
-        let genderHint = 'Sr./Sra.';
-        const name = (it.cliente || '').trim();
-        if (/\b(sra|senhora|srt[aã])\b/i.test(name)) genderHint = 'Sra.';
-        else if (/\b(sr|senhor)\b/i.test(name)) genderHint = 'Sr.';
-        const templates = [
-          `${greeting}, tudo bem? Falo com ${genderHint} ${name}? Temos uma ordem de serviço agendada para a data de hoje! Podemos confirmar?`,
-          `${greeting}, o técnico está tentando localizar a residência, poderia por gentileza encaminhar a localização em tempo real?`
-        ];
-        const choice = prompt(`1 - Confirmar agendamento\n2 - Pedir localização\n\nDigite 1 ou 2:`,'1');
-        const idx = choice === '2' ? 1 : 0;
-        const text = templates[idx];
-        const url = getWhatsAppLink(it.telefone, text);
-        if (url === '#') return alert('Número inválido.');
-        window.open(url, '_blank');
+        const phones = (it.telefone || '').split('/').map(p => p.trim()).filter(Boolean);
+        if (phones.length > 1) {
+          const picker = document.createElement('div');
+          picker.style.position = 'absolute';
+          picker.style.zIndex = '10002';
+          picker.style.background = 'var(--bg-card, #1e293b)';
+          picker.style.border = '1px solid rgba(255,255,255,0.06)';
+          picker.style.padding = '8px';
+          picker.style.borderRadius = '8px';
+          picker.style.boxShadow = '0 8px 30px rgba(0,0,0,0.4)';
+          const rect = btnWhatsapp.getBoundingClientRect();
+          picker.style.top = `${rect.bottom + window.scrollY + 6}px`;
+          picker.style.left = `${Math.min(rect.left + window.scrollX, window.innerWidth - 260)}px`;
+          phones.forEach(pnum => {
+            const b = document.createElement('button');
+            b.textContent = pnum;
+            b.style.display = 'block';
+            b.style.width = '100%';
+            b.style.marginBottom = '6px';
+            b.style.padding = '8px';
+            b.style.borderRadius = '6px';
+            b.style.border = '1px solid rgba(255,255,255,0.04)';
+            b.style.background = 'transparent';
+            b.style.color = 'var(--text-main, #f8fafc)';
+            b.onclick = (ev) => {
+              ev.stopPropagation();
+              it.telefone = pnum;
+              showTemplatePicker(it, b);
+              try{document.body.removeChild(picker);}catch(err){}
+            };
+            picker.appendChild(b);
+          });
+          const cancel = document.createElement('button');
+          cancel.textContent = 'Cancelar';
+          cancel.style.padding = '8px';
+          cancel.style.borderRadius = '6px';
+          cancel.style.border = '1px solid rgba(255,255,255,0.04)';
+          cancel.style.background = 'transparent';
+          cancel.onclick = () => { try{document.body.removeChild(picker);}catch(err){} };
+          picker.appendChild(cancel);
+          document.body.appendChild(picker);
+          setTimeout(() => { const onDoc = (ev) => { if (!picker.contains(ev.target)) try{document.body.removeChild(picker);window.removeEventListener('click', onDoc);}catch(e){} }; window.addEventListener('click', onDoc); }, 10);
+          return;
+        }
+        showTemplatePicker(it, btnWhatsapp);
     };
+    card.style.animationDelay = `${(index % 8) * 0.03}s`;
     return clone;
   }
+
+  const sentinel = document.createElement('div');
+  sentinel.id = 'list-sentinel';
+  sentinel.style.height = '1px';
+  resultsEl.appendChild(sentinel);
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting && !moreBtn.classList.contains('hidden')) render();
+    });
+  }, { root: null, rootMargin: '0px', threshold: 0.1 });
+  observer.observe(sentinel);
 
   function render() {
     const term = (filterEl.value || '').toLowerCase();
@@ -304,26 +478,51 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const batch = list.slice(rendered, rendered + PER_PAGE);
     const frag = document.createDocumentFragment();
-    batch.forEach(it => frag.appendChild(createCard(it)));
+    batch.forEach((it, idx) => frag.appendChild(createCard(it, rendered + idx)));
     resultsEl.appendChild(frag);
     rendered += batch.length;
     moreBtn.classList.toggle('hidden', rendered >= list.length);
   }
 
+  function trapFocus(modRoot) {
+    const focusable = modRoot.querySelectorAll('a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])');
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    first.focus();
+    function keyHandler(e) {
+      if (e.key === 'Escape') { overlay.classList.add('hidden'); document.body.style.overflow = ''; window.removeEventListener('keydown', keyHandler); }
+      if (e.key === 'Tab') {
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+    window.addEventListener('keydown', keyHandler);
+  }
+
   function openModal(it, addr, mapsLink, isBalsa) {
     modalBody.innerHTML = '';
     const clone = modalTemplate.content.cloneNode(true);
-    clone.querySelector('.modal-client').textContent = it.cliente;
-    clone.querySelector('.modal-branch').textContent = it.filial;
-    clone.querySelector('.modal-tech').textContent = it.tecnico;
-    clone.querySelector('.modal-login').textContent = `${it.login || '-'} / ${it.senha || '-'}`;
-    clone.querySelector('.modal-phone').textContent = it.telefone || '-';
-    clone.querySelector('.modal-subject').textContent = it.assunto;
-    clone.querySelector('.modal-address').textContent = addr || 'Não informado';
-    clone.querySelector('.modal-complement').textContent = it.complemento || '-';
+    const modalClient = clone.querySelector('.modal-client');
+    const modalBranch = clone.querySelector('.modal-branch');
+    const modalTech = clone.querySelector('.modal-tech');
+    const modalLogin = clone.querySelector('.modal-login');
+    const modalPhone = clone.querySelector('.modal-phone');
+    const modalSubject = clone.querySelector('.modal-subject');
+    const modalAddress = clone.querySelector('.modal-address');
+    const modalComplement = clone.querySelector('.modal-complement');
+    const modalRef = clone.querySelector('.modal-ref');
+    if (modalClient) modalClient.textContent = it.cliente;
+    if (modalBranch) modalBranch.textContent = it.filial;
+    if (modalTech) modalTech.textContent = it.tecnico;
+    if (modalLogin) modalLogin.textContent = `${it.login || '-'} / ${it.senha || '-'}`;
+    if (modalPhone) modalPhone.textContent = it.telefone || '-';
+    if (modalSubject) modalSubject.textContent = it.assunto;
+    if (modalAddress) modalAddress.textContent = addr || 'Não informado';
+    if (modalComplement) modalComplement.textContent = it.complemento || '-';
     const districtEl = clone.querySelector('.modal-district');
     if (districtEl) districtEl.textContent = it.bairro || '-';
-    clone.querySelector('.modal-ref').textContent = it.referencia || '-';
+    if (modalRef) modalRef.textContent = it.referencia || '-';
     const mapContainer = clone.querySelector('#mapContainer');
     const q = encodeURIComponent(addr || it.cidade || '');
     const gType = isBalsa ? 'k' : 'm';
@@ -346,6 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
       copyCredsBtn.onclick = (e) => {
         navigator.clipboard.writeText(formatCredentials(it));
         e.target.textContent = 'Copiado!'; setTimeout(()=>e.target.textContent='Copiar Dados', 2000);
+        showToast('Credenciais copiadas');
       };
     }
     const copyLinkBtn = clone.querySelector('.copy-link-btn');
@@ -353,11 +553,17 @@ document.addEventListener('DOMContentLoaded', () => {
       copyLinkBtn.onclick = (e) => {
         navigator.clipboard.writeText(mapsLink);
         e.target.textContent = 'Copiado!'; setTimeout(()=>e.target.textContent='Copiar Link', 2000);
+        showToast('Link copiado');
       };
     }
     modalBody.appendChild(clone);
     overlay.classList.remove('hidden');
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
     document.body.style.overflow = 'hidden';
+    setTimeout(() => {
+      trapFocus(modalBody);
+    }, 20);
   }
 
   copyLinkListBtn.onclick = () => {
@@ -367,7 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const link = (addr && addr.length > 8) ? getGoogleMapsLink(addr) : 'Sem endereço válido';
         return `*${i+1}. ${it.cliente}*\n🔗 ${link}`;
     }).join('\n\n');
-    navigator.clipboard.writeText(text).then(() => alert('Lista copiada!'));
+    navigator.clipboard.writeText(text).then(() => { alert('Lista copiada!'); showToast('Lista copiada'); });
   };
 
   openRouteBtn.onclick = () => {
@@ -398,6 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadBtn.onclick = async (e) => {
     e.preventDefault(); e.stopPropagation();
     if(!selectedFile) return;
+    if (selectedFile.size === 0) { alert('Arquivo vazio. Verifique o arquivo e tente novamente.'); return; }
     loadBtn.disabled = true; loadBtn.textContent = 'Lendo...';
     showProgress(0.3); setStatus('Lendo arquivo...');
     resultsEl.innerHTML = ''; rendered = 0;
@@ -405,13 +612,16 @@ document.addEventListener('DOMContentLoaded', () => {
         let rawRows = [];
         if(selectedFile.name.toLowerCase().endsWith('.csv')) {
             const text = await readAsTextDetectEncoding(selectedFile);
+            if (!text || !text.trim()) throw new Error('CSV vazio');
             rawRows = parseCSVManual(text);
+            rawRows = normalizeRows(rawRows);
         } else {
             const XLSX = await loadSheetJs();
             const buffer = await selectedFile.arrayBuffer();
             const wb = XLSX.read(buffer, {type:'array'});
             const ws = wb.Sheets[wb.SheetNames[0]];
             rawRows = XLSX.utils.sheet_to_json(ws, {header:1});
+            rawRows = normalizeRows(rawRows);
         }
         items = mapData(rawRows);
         if(items.length === 0) throw new Error("Nenhum dado encontrado.");
