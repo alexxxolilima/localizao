@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
         fileStatus: document.getElementById('fileStatus'),
         results: document.getElementById('results'),
         filter: document.getElementById('filter'),
+        dateFilter: document.getElementById('dateFilter'),
+        periodFilter: document.getElementById('periodFilter'),
         techFilter: document.getElementById('techFilter'),
         regionFilter: document.getElementById('regionFilter'),
         moreBtn: document.getElementById('moreBtn'),
@@ -29,7 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
         openRouteBtn: document.getElementById('openRouteBtn'),
         statsDashboard: document.getElementById('statsDashboard'),
         statTotal: document.getElementById('totalCount'),
-        statBalsa: document.getElementById('balsaCount')
+        statBalsa: document.getElementById('balsaCount'),
+        statOverdue: document.getElementById('overdueCount') || { textContent: '' } 
     };
 
     let state = {
@@ -39,7 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentFile: null,
         activeFilter: 'all',
         itemForTemplate: null,
-        PAGE_SIZE: 50
+        PAGE_SIZE: 50,
+        todayStr: new Date().toLocaleDateString('en-CA')
     };
 
     const REGEX = {
@@ -78,41 +82,50 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatDateTime(val) {
         if (!val) return '';
         const s = String(val).trim();
+        let datePart = s.split(' ')[0];
+        let timePart = s.includes(' ') ? s.split(' ')[1].substring(0,5) : '';
 
-        const hasTime = s.includes(':');
-        
-        let datePart = s;
-        let timePart = '';
-        
-        if (hasTime) {
-            const parts = s.split(' ');
-            if (parts.length > 1) {
-                datePart = parts[0];
-                timePart = parts[1].substring(0, 5);
-            }
-        }
-
-        let finalDate = datePart;
         if (datePart.match(/^\d{4}-\d{2}-\d{2}/)) {
             const p = datePart.split('-');
-            finalDate = `${p[2]}/${p[1]}`; 
-        } 
-        else if (datePart.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+            datePart = `${p[2]}/${p[1]}`;
+        } else if (datePart.match(/^\d{2}\/\d{2}\/\d{4}/)) {
             const p = datePart.split('/');
-            finalDate = `${p[0]}/${p[1]}`; 
+            datePart = `${p[0]}/${p[1]}`;
         }
+        return timePart ? `${datePart} às ${timePart}` : datePart;
+    }
 
-        if (hasTime && timePart) {
-            return `${finalDate} às ${timePart}`;
-        }
-        return finalDate;
+    function getDateOnly(val) {
+        if (!val) return '';
+        const s = String(val).trim();
+        if (s.match(/^\d{4}-\d{2}-\d{2}/)) return s.split(' ')[0];
+        return '';
+    }
+
+    function buildAddress(it) {
+        let parts = [];
+        if (it.endereco) parts.push(it.endereco);
+        if (it.numero) parts.push(it.numero);
+        if (it.complemento) parts.push(it.complemento);
+        if (it.bairro) parts.push(it.bairro);
+        return parts.filter(p => p && String(p).trim().length > 0).join(', ');
+    }
+
+    function buildCleanAddress(it) {
+        let parts = [];
+        if (it.endereco) parts.push(it.endereco);
+        if (it.numero) parts.push(it.numero);
+        let main = parts.join(', ');
+        if (it.bairro) main += ` - ${it.bairro}`;
+        if (it.cidade) main += ` - ${it.cidade}`;
+        return main.replace(/, ,/g, ',').trim();
     }
 
     function mapData(rows) {
         if (!rows || rows.length < 2) return [];
 
-        const headers = rows[0]; 
-        const mapIdx = {}; 
+        const headers = rows[0];
+        const mapIdx = {};
 
         headers.forEach((h, index) => {
             if (!h) return;
@@ -154,6 +167,11 @@ document.addEventListener('DOMContentLoaded', () => {
             let rawAgenda = (mapIdx.agendamento !== undefined) ? row[mapIdx.agendamento] : null;
             if (!rawAgenda && mapIdx.dataReserva !== undefined) rawAgenda = row[mapIdx.dataReserva];
 
+            const horarioTexto = (mapIdx.horario !== undefined && row[mapIdx.horario]) ? String(row[mapIdx.horario]).toLowerCase() : '';
+            let periodoClass = '';
+            if (horarioTexto.includes('manh')) periodoClass = 'slot-manha';
+            else if (horarioTexto.includes('tarde')) periodoClass = 'slot-tarde';
+
             const item = {
                 cliente: (mapIdx.cliente !== undefined) ? row[mapIdx.cliente] : 'Cliente Desconhecido',
                 filial: (mapIdx.filial !== undefined) ? row[mapIdx.filial] : '',
@@ -170,9 +188,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 horario: (mapIdx.horario !== undefined) ? row[mapIdx.horario] : '',
                 contrato: (mapIdx.contrato !== undefined) ? row[mapIdx.contrato] : '',
                 agendamento: rawAgenda,
+                agendamentoIso: getDateOnly(rawAgenda),
+                periodoClass: periodoClass,
                 telefone: tels.join(' / '),
                 raw: row
             };
+
+            item.isToday = (item.agendamentoIso === state.todayStr);
+            item.isOverdue = (item.agendamentoIso && item.agendamentoIso < state.todayStr);
 
             const fullAddr = (String(item.endereco || '') + ' ' + String(item.bairro || '') + ' ' + String(item.cidade || '')).toLowerCase();
             const cepMatch = String(item.endereco).match(/\d{5}-?\d{3}/);
@@ -193,17 +216,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 data.push(item);
             }
         }
-        return data;
-    }
-
-    function buildAddress(it) {
-        let parts = [];
-        if (it.endereco) parts.push(it.endereco);
-        if (it.numero) parts.push(it.numero);
-        if (it.complemento) parts.push(it.complemento);
-        if (it.bairro) parts.push(it.bairro);
-        if (it.cidade) parts.push(it.cidade);
-        return parts.filter(p => p && String(p).trim().length > 0).join(', ');
+        
+        return data.sort((a, b) => {
+            if (a.isOverdue && !b.isOverdue) return -1;
+            if (!a.isOverdue && b.isOverdue) return 1;
+            if (a.isToday && !b.isToday) return -1;
+            if (!a.isToday && b.isToday) return 1;
+            return 0;
+        });
     }
 
     function createCard(it) {
@@ -211,10 +231,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const clone = template.content.cloneNode(true);
         const card = clone.querySelector('.result-card');
         
-        const fullAddr = buildAddress(it);
-        const hasAddr = fullAddr.length > 10 && !/n[ãa]o (informado|consta)/i.test(fullAddr);
+        const displayAddr = buildAddress(it);
+        const cleanAddr = buildCleanAddress(it);
+        const hasAddr = cleanAddr.length > 10 && !/n[ãa]o (informado|consta)/i.test(cleanAddr);
         
         card.classList.add(`region-${it.region}`);
+        if (it.periodoClass) card.classList.add(it.periodoClass);
+        if (it.isToday) card.classList.add('is-today');
+        if (it.isOverdue) card.classList.add('is-overdue');
         if (!hasAddr) card.classList.add('no-addr');
 
         card.querySelector('.card-client').textContent = it.cliente;
@@ -222,14 +246,14 @@ document.addEventListener('DOMContentLoaded', () => {
         let subjectText = it.assunto;
         if (it.agendamento) {
             const fmtDate = formatDateTime(it.agendamento);
-            if (fmtDate && fmtDate.length > 2) {
+            if (fmtDate.length > 2) {
                 subjectText = `📅 ${fmtDate} — ${it.assunto}`;
             }
         }
         card.querySelector('.card-subject').textContent = subjectText;
         
         card.querySelector('.card-tech').textContent = it.tecnico || 'Sem Técnico';
-        card.querySelector('.card-address').textContent = hasAddr ? fullAddr : 'Endereço não identificado';
+        card.querySelector('.card-address').textContent = hasAddr ? displayAddr : 'Endereço não identificado';
         
         const badgeBox = card.querySelector('.card-badges');
         if (it.region === '098-balsa') badgeBox.innerHTML += `<span class="badge-count" style="background:var(--warning);color:#000">⚠️ Balsa</span>`;
@@ -239,8 +263,11 @@ document.addEventListener('DOMContentLoaded', () => {
              const speed = it.contrato.split(' ').pop();
              badgeBox.innerHTML += `<span class="badge-count" style="background:var(--bg-element);border:1px solid var(--border)">${speed}</span>`;
         }
+        if (it.horario) {
+             badgeBox.innerHTML += `<span class="badge-count" style="background:var(--bg-element);border:1px solid var(--border)">${it.horario}</span>`;
+        }
 
-        const mapsLink = hasAddr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddr)}` : '#';
+        const mapsLink = hasAddr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanAddr)}` : '#';
         
         const btnMaps = card.querySelector('.open-maps');
         btnMaps.href = mapsLink;
@@ -269,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function render() {
-        const { items, filtered, renderedCount, PAGE_SIZE } = state;
+        const { filtered, renderedCount, PAGE_SIZE } = state;
         const container = els.results;
         
         if (renderedCount === 0) container.innerHTML = '';
@@ -298,17 +325,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const term = els.filter.value.toLowerCase();
         const tech = els.techFilter.value;
         const region = els.regionFilter.value;
+        const dateVal = els.dateFilter ? els.dateFilter.value : '';
+        const period = els.periodFilter ? els.periodFilter.value : '';
         const quick = state.activeFilter;
 
         state.filtered = state.items.filter(it => {
-            const matchText = (String(it.cliente) + ' ' + String(it.endereco) + ' ' + String(it.login) + ' ' + String(it.assunto)).toLowerCase().includes(term);
+            const matchText = (String(it.cliente) + ' ' + String(it.endereco) + ' ' + String(it.login) + ' ' + String(it.assunto) + ' ' + String(it.contrato)).toLowerCase().includes(term);
             const matchTech = !tech || it.tecnico === tech;
             const matchRegion = region === 'all' || it.region === region;
+            
+            const matchDate = !dateVal || it.agendamentoIso === dateVal;
+            
+            let matchPeriod = true;
+            if (period === 'manha') matchPeriod = it.periodoClass === 'slot-manha';
+            if (period === 'tarde') matchPeriod = it.periodoClass === 'slot-tarde';
+
             let matchQuick = true;
             if (quick === 'balsa') matchQuick = it.region === '098-balsa';
+            if (quick === 'overdue') matchQuick = it.isOverdue;
+            if (quick === 'today') matchQuick = it.isToday;
             if (quick === 'noaddr') matchQuick = buildAddress(it).length < 10;
 
-            return matchText && matchTech && matchRegion && matchQuick;
+            return matchText && matchTech && matchRegion && matchDate && matchPeriod && matchQuick;
         });
 
         state.renderedCount = 0;
@@ -317,6 +355,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateCounters() {
         const balsaCount = state.items.filter(it => it.region === '098-balsa').length;
+        const overdueCount = state.items.filter(it => it.isOverdue).length;
+
         const badge = document.querySelector('.badge-count[data-region="098-balsa"]');
         if (badge) {
             badge.textContent = balsaCount;
@@ -325,6 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (els.statTotal) els.statTotal.textContent = state.items.length;
         if (els.statBalsa) els.statBalsa.textContent = balsaCount;
+        if (els.statOverdue) els.statOverdue.textContent = overdueCount;
 
         if (els.statsDashboard && state.items.length > 0) {
             els.statsDashboard.classList.remove('hidden');
@@ -345,7 +386,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function openDetails(it) {
         const tpl = document.getElementById('modalTemplate').content.cloneNode(true);
         const addr = buildAddress(it);
-        const mapQ = encodeURIComponent(addr || it.cidade);
+        const cleanAddr = buildCleanAddress(it);
+        const mapQ = encodeURIComponent(cleanAddr);
 
         tpl.querySelector('.modal-client').textContent = it.cliente;
         tpl.querySelector('.modal-branch').textContent = it.filial;
@@ -383,6 +425,16 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.textContent = 'Copiado!';
             setTimeout(() => e.target.textContent = 'Copiar', 1500);
         };
+
+        const linkBtn = tpl.querySelector('.copy-link-btn');
+        if(linkBtn) {
+            linkBtn.onclick = (e) => {
+                const link = `https://www.google.com/maps/search/?api=1&query=${mapQ}`;
+                navigator.clipboard.writeText(link);
+                e.target.textContent = 'Copiado!';
+                setTimeout(() => e.target.textContent = 'Copiar Link', 1500);
+            };
+        }
 
         els.modalBody.innerHTML = '';
         els.modalBody.appendChild(tpl);
@@ -445,6 +497,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     els.filter.oninput = () => { clearTimeout(window.deb); window.deb = setTimeout(filterData, 300); };
+    if(els.dateFilter) els.dateFilter.onchange = filterData;
+    if(els.periodFilter) els.periodFilter.onchange = filterData;
     els.techFilter.onchange = filterData;
     els.regionFilter.onchange = filterData;
     
@@ -507,20 +561,23 @@ document.addEventListener('DOMContentLoaded', () => {
     
     els.copyListBtn.onclick = () => {
         if (!state.filtered.length) return;
-        const txt = state.filtered.slice(0, 50).map(i => `*${i.cliente}*\n${buildAddress(i)}`).join('\n\n');
+        const txt = state.filtered.slice(0, 50).map(i => {
+            const clean = buildCleanAddress(i);
+            const link = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clean)}`;
+            return `*${i.cliente}*\n${link}`;
+        }).join('\n\n');
         navigator.clipboard.writeText(txt);
         showToast('Lista copiada!', 'success');
     };
 
     els.openRouteBtn.onclick = () => {
         if (!state.filtered.length) return;
-        const validItems = state.filtered.filter(it => buildAddress(it).length > 10).slice(0, 10);
-        if (validItems.length === 0) return showToast('Sem endereços válidos', 'error');
-        
-        const dests = validItems.map(it => encodeURIComponent(buildAddress(it))).join('/');
-        window.open(`https://www.google.com/maps/dir//${dests}`, '_blank');
+        const validItems = state.filtered.filter(it => buildCleanAddress(it).length > 5).slice(0, 10);
+        const dests = validItems.map(it => encodeURIComponent(buildCleanAddress(it))).join('/');
+        window.open(`https://www.google.com/maps/dir/${dests}`, '_blank');
     };
 });
+
 
 
 
