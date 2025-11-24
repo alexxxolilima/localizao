@@ -12,8 +12,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="style.css">
   <link rel="shortcut icon" href="OIP.jpg" type="image/png">
@@ -50,8 +49,7 @@
       <div class="header-controls">
         <button id="themeBtn" class="icon-btn" aria-label="Alternar Tema" title="Mudar Tema">
           <svg class="icon" viewBox="0 0 24 24">
-            <path
-              d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z" />
+            <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z" />
           </svg>
         </button>
       </div>
@@ -72,6 +70,12 @@
           <span class="stat-label">Região Balsa</span>
         </div>
       </div>
+      <div class="stat-card">
+        <div class="stat-icon bg-red">⏰</div>
+        <div class="stat-info">
+          <span class="stat-value" id="overdueCount">0</span>
+          <span class="stat-label">....</span>
+        </div>
       </div>
     </section>
 
@@ -103,14 +107,23 @@
       <div class="search-bar-wrapper">
         <div class="search-input-group">
           <svg class="search-icon" viewBox="0 0 24 24">
-            <path
-              d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
           </svg>
-          <input id="filter" type="text" placeholder="Buscar por cliente, endereço, OS ou login..." autocomplete="off">
+          <input id="filter" type="text" placeholder="Buscar cliente, contrato, endereço..." autocomplete="off">
         </div>
       </div>
 
       <div class="filters-row">
+        <div class="select-wrapper">
+            <input type="date" id="dateFilter" class="date-input" title="Filtrar por data">
+        </div>
+        <div class="select-wrapper">
+            <select id="periodFilter">
+                <option value="">Todos Horários</option>
+                <option value="manha">Manhã</option>
+                <option value="tarde">Tarde</option>
+            </select>
+        </div>
         <div class="select-wrapper">
           <select id="techFilter">
             <option value="">Todos os Técnicos</option>
@@ -131,6 +144,8 @@
 
         <div class="quick-actions">
           <button class="chip active" data-filter="all">Todos</button>
+          <button class="chip today-chip" data-filter="today">📅 Hoje</button>
+          <button class="chip danger-chip" data-filter="overdue">⏰ ....</button>
           <button class="chip warning-chip" data-filter="balsa">
             <span>⚠️ Balsa</span>
             <span class="badge-count hidden" data-region="098-balsa">0</span>
@@ -142,15 +157,13 @@
       <div class="bulk-actions">
         <button id="copyLinkListBtn" class="btn btn-ghost btn-sm">
           <svg class="icon-xs" viewBox="0 0 24 24">
-            <path
-              d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
           </svg>
-          Copiar Lista
+          Copiar Lista (Links)
         </button>
         <button id="openRouteBtn" class="btn btn-ghost btn-sm">
           <svg class="icon-xs" viewBox="0 0 24 24">
-            <path
-              d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
           </svg>
           Gerar Rota (Maps)
         </button>
@@ -202,7 +215,7 @@
             </div>
           </button>
           <button class="template-option"
-            data-template="{{saudacao}},  Sou do suporte tecnico da Athon Telecom. Nosso tecnico está procuruando o local nesse momento, porém o mesmo não localizou o local. Pode  encaminhar a localização em tempo real por gentileza">
+            data-template="{{saudacao}}, Sou do suporte tecnico da Athon Telecom. Nosso tecnico está procurando o local nesse momento, porém o mesmo não localizou. Pode encaminhar a localização em tempo real por gentileza?">
             <span class="tmpl-icon">📍</span>
             <div class="tmpl-text">
               <strong>Pedir Localização</strong>
@@ -210,7 +223,7 @@
             </div>
           </button>
           <button class="template-option"
-            data-template="{{saudacao}}, o nosso técnico está a caminho do seu endereço. ">
+            data-template="{{saudacao}}, o nosso técnico está a caminho do seu endereço.">
             <span class="tmpl-icon">🚚</span>
             <div class="tmpl-text">
               <strong>Estou a caminho</strong>
@@ -247,6 +260,7 @@
 
   <template id="cardTemplate">
     <article class="result-card" tabindex="0">
+      <div class="card-status-strip"></div>
       <div class="card-top">
         <div class="card-badges"></div>
         <div class="card-tech-badge">
@@ -262,8 +276,7 @@
 
       <div class="card-address-box">
         <svg class="icon-loc" viewBox="0 0 24 24">
-          <path
-            d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
         </svg>
         <span class="card-address">Endereço carregando...</span>
       </div>
@@ -286,91 +299,88 @@
   </template>
 
   <template id="modalTemplate">
-        <div class="modal-grid">
-            <div class="modal-info-col">
-                <div class="info-group highlight-group">
-                    <label>Cliente</label>
-                    <div class="modal-client text-lg">-</div>
-                </div>
-
-                <div class="grid-2-col" style="margin-bottom: 10px;">
-                    <div class="info-group" style="background: rgba(34, 197, 94, 0.1); padding: 8px; border-radius: 6px; border: 1px solid rgba(34, 197, 94, 0.2);">
-                        <label style="color: var(--success);">Agendamento</label>
-                        <div class="modal-agenda" style="font-weight: 700;">-</div>
-                    </div>
-                    <div class="info-group">
-                        <label>Melhor Horário</label>
-                        <div class="modal-periodo">-</div>
-                    </div>
-                </div>
-                
-                <div class="info-group">
-                    <label>Plano / Contrato</label>
-                    <div class="modal-contract" style="font-weight: 600; color: var(--primary);">-</div>
-                </div>
-                <div class="grid-2-col">
-                    <div class="info-group">
-                        <label>Filial</label>
-                        <div class="modal-branch">-</div>
-                    </div>
-                    <div class="info-group">
-                        <label>Técnico</label>
-                        <div class="modal-tech">-</div>
-                    </div>
-                </div>
-
-                <div class="info-group login-box">
-                    <div class="login-header">
-                        <label>Credenciais PPPoE</label>
-                        <button class="copy-creds-btn btn-xs">Copiar</button>
-                    </div>
-                    <div class="modal-login mono-font">-</div>
-                </div>
-
-                <div class="info-group">
-                    <label>Telefones</label>
-                    <div class="modal-phone">-</div>
-                </div>
-
-                <div class="info-group">
-                    <label>Assunto / Problema</label>
-                    <div class="modal-subject">-</div>
-                </div>
-
-                <div class="info-group">
-                    <label>Referência</label>
-                    <div class="modal-ref">-</div>
-                </div>
-            </div>
-
-            <div class="modal-map-col">
-                <div class="address-card">
-                    <div class="address-header">
-                        <label>Localização</label>
-                        <button class="copy-link-btn btn-xs">Copiar Link</button>
-                    </div>
-                    <div class="modal-address">-</div>
-                    <div class="modal-complement small-text">-</div>
-                </div>
-
-                <div class="map-toolbar">
-                    <button class="provider-btn active" data-provider="google">Google</button>
-                    <button class="provider-btn" data-provider="waze">Waze</button>
-                </div>
-
-                <div id="mapContainer" class="map-wrapper">
-                    <div class="map-placeholder">Carregando mapa...</div>
-                </div>
-            </div>
+    <div class="modal-grid">
+      <div class="modal-info-col">
+        <div class="info-group highlight-group">
+          <label>Cliente</label>
+          <div class="modal-client text-lg">-</div>
         </div>
-    </template>
+
+        <div class="grid-2-col" style="margin-bottom: 10px;">
+          <div class="info-group" style="background: rgba(34, 197, 94, 0.1); padding: 8px; border-radius: 6px; border: 1px solid rgba(34, 197, 94, 0.2);">
+            <label style="color: var(--success);">Agendamento</label>
+            <div class="modal-agenda" style="font-weight: 700;">-</div>
+          </div>
+          <div class="info-group">
+            <label>Melhor Horário</label>
+            <div class="modal-periodo">-</div>
+          </div>
+        </div>
+        
+        <div class="info-group">
+          <label>Plano / Contrato</label>
+          <div class="modal-contract" style="font-weight: 600; color: var(--primary);">-</div>
+        </div>
+        <div class="grid-2-col">
+          <div class="info-group">
+            <label>Filial</label>
+            <div class="modal-branch">-</div>
+          </div>
+          <div class="info-group">
+            <label>Técnico</label>
+            <div class="modal-tech">-</div>
+          </div>
+        </div>
+
+        <div class="info-group login-box">
+          <div class="login-header">
+            <label>Credenciais PPPoE</label>
+            <button class="copy-creds-btn btn-xs">Copiar</button>
+          </div>
+          <div class="modal-login mono-font">-</div>
+        </div>
+
+        <div class="info-group">
+          <label>Telefones</label>
+          <div class="modal-phone">-</div>
+        </div>
+
+        <div class="info-group">
+          <label>Assunto / Problema</label>
+          <div class="modal-subject">-</div>
+        </div>
+
+        <div class="info-group">
+          <label>Referência</label>
+          <div class="modal-ref">-</div>
+        </div>
+      </div>
+
+      <div class="modal-map-col">
+        <div class="address-card">
+          <div class="address-header">
+            <label>Localização</label>
+            <button class="copy-link-btn btn-xs">Copiar Link</button>
+          </div>
+          <div class="modal-address">-</div>
+          <div class="modal-complement small-text">-</div>
+        </div>
+
+        <div class="map-toolbar">
+          <button class="provider-btn active" data-provider="google">Google</button>
+          <button class="provider-btn" data-provider="waze">Waze</button>
+        </div>
+
+        <div id="mapContainer" class="map-wrapper">
+          <div class="map-placeholder">Carregando mapa...</div>
+        </div>
+      </div>
+    </div>
+  </template>
 
   <script src="log.js"></script>
 </body>
-
 </html>
-
-
 
 
 
